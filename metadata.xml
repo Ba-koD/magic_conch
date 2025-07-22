@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+    <name>Magic Conch</name>
+    <directory>magic_conch</directory>
+    <id>0</id>
+    <description>마법의 소라고동에게 모든걸 맡겨보세요</description>
+    <version>1.0</version>
+    <visibility>Public</visibility>
+    <tag id="Lua"/>
+</metadata>
