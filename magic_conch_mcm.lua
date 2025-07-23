@@ -1,9 +1,8 @@
 local MagicConch_MCM = {}
-local MagicConch_Config = include("magic_conch_config")
 
-function MagicConch_MCM.Setup(mod)
+function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
     if not ModConfigMenu then return end
-    local category = "Magic Conch v" .. MagicConch_Config.VERSION
+    local category = "Magic Conch v" .. mod.Config.Version
     ModConfigMenu.RemoveCategory(category)
 
     ModConfigMenu.AddSpace(category, "General")
@@ -27,29 +26,44 @@ function MagicConch_MCM.Setup(mod)
         OnChange = function(b) mod.Config.resoluteMode = b end,
     })
 
-    -- Language Selection (0:Auto, 1:EN, 2:KO)
+    -- Language Selection (0:Auto, 1:EN, 2:KR ...)
     ModConfigMenu.AddSetting(category, "General", {
         Type = ModConfigMenu.OptionType.NUMBER,
         CurrentSetting = function()
-            if mod.Config.language == "EN" then return 1
-            elseif mod.Config.language == "KO" then return 2
-            else return 0 end
+            local lang = mod.Config.language
+            for i, langObj in ipairs(MagicConch_Lang.LANGUAGE_MAP) do
+                if lang == langObj.code then
+                    return i
+                end
+            end
+            return 0 -- 0: Auto
         end,
         Minimum = 0,
-        Maximum = 2,
+        Maximum = #MagicConch_Lang.LANGUAGE_MAP,
         Display = function()
-            local t = {"Auto (Game Language)", "English", "Korean"}
-            local idx = 1
-            if mod.Config.language == "EN" then idx = 2
-            elseif mod.Config.language == "KO" then idx = 3 end
-            return "Language: " .. t[idx]
+            local idx = 0
+            local lang = mod.Config.language
+            for i, langObj in ipairs(MagicConch_Lang.LANGUAGE_MAP) do
+                if lang == langObj.code then
+                    idx = i
+                    break
+                end
+            end
+            if idx == 0 then
+                local langTable = MagicConch_Lang.getLanguageTable(mod.Config)
+                return "Language: Auto(" .. langTable.name .. ")"
+            else
+                return "Language: " .. MagicConch_Lang.LANGUAGE_MAP[idx].name
+            end
         end,
         OnChange = function(n)
-            if n == 0 then mod.Config.language = "auto"
-            elseif n == 1 then mod.Config.language = "EN"
-            elseif n == 2 then mod.Config.language = "KO" end
+            if n == 0 then
+                mod.Config.language = "Auto"
+            else
+                mod.Config.language = MagicConch_Lang.LANGUAGE_MAP[n].code
+            end
         end,
-        Info = {"Select the output language. (Default: Game Language)"},
+        Info = {"Select the output language. (Default: Auto)"},
     })
 
     -- Key Binding (including Popup)
@@ -79,7 +93,8 @@ function MagicConch_MCM.Setup(mod)
             end
             return "Press a button on your keyboard to change this setting.$newline$newline" ..
                 keepSettingString .. "Press ESCAPE to go back and clear this setting."
-        end
+        end,
+        Info = {"Press a button on your keyboard to change this setting."},
     })
 
     -- Display Category

@@ -1,36 +1,5 @@
 local MagicConch_Render = {}
 
-local game = Game()
-
-local font = Font()
-local fontLoaded = false
-local currentFontPath = nil
-
--- 1. When the module is loaded (when the script is first executed)
-local function tryLoadFont(fontPath)
-    if fontLoaded and currentFontPath == fontPath then return end
-    local ok, err = pcall(function() font:Load(fontPath) end)
-    if ok then
-        fontLoaded = true
-        currentFontPath = fontPath
-    else
-        fontLoaded = false
-        Isaac.ConsoleOutput("[MagicConch][DEBUG] Font load failed: " .. tostring(err) .. "\\n")
-    end
-end
-
--- Load the font only once at the initial loading point
-tryLoadFont("resources/font/Kkubulim.fnt")
-
--- 2. Load the font again in the game start callback
-function MagicConch_Render:OnGameStart()
-    tryLoadFont("resources/font/Kkubulim.fnt")
-end
-
-if ModCallbacks and Mod then
-    Mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function() MagicConch_Render:OnGameStart() end)
-end
-
 local function renderLine(text, x, y, r, g, b)
     Isaac.RenderText(text, x, y, r or 1, g or 1, b or 1, 1)
 end
@@ -53,7 +22,7 @@ local function RenderRuleStyleText(font, text, x, y, r, g, b, a, center)
     font:DrawStringUTF8(str, x, y, KColor(r, g, b, a), 0, true)
 end
 
-function MagicConch_Render:Render(mod, displayText, displayTimer, getCurrentLanguage)
+function MagicConch_Render:Render(mod, displayText, displayTimer, MagicConch_Lang, fontObj)
     if mod and mod.Config and mod.Config.debugMode then
         local x = mod.Config.debugHudX or 60
         local y = mod.Config.debugHudY or 40
@@ -64,17 +33,19 @@ function MagicConch_Render:Render(mod, displayText, displayTimer, getCurrentLang
         renderLine("Hotkey: " .. tostring(self:HotkeyToString(mod.Config.hotkey)), x, y, 1, 1, 1); y = y + lineH
         renderLine("displayText: " .. tostring(displayText), x, y, 1, 1, 1); y = y + lineH
         renderLine("displayTimer: " .. tostring(displayTimer), x, y, 1, 1, 1); y = y + lineH
-        renderLine("Language: " .. tostring(getCurrentLanguage()), x, y, 1, 1, 1); y = y + lineH
+        renderLine("Language: " .. tostring(MagicConch_Lang.getLanguageTable(mod.Config).name), x, y, 1, 1, 1); y = y + lineH
+        renderLine("Options.Language: " .. tostring(Options.Language), x, y, 1, 1, 1); y = y + lineH
+        renderLine("fontObj.fontPath: " .. tostring(fontObj.fontPath), x, y, 1, 1, 1); y = y + lineH
     end
 
-    if fontLoaded and displayText then
+    if fontObj and fontObj.font and displayText then
         local screenW = Isaac.GetScreenWidth()
         local screenH = Isaac.GetScreenHeight()
         local x = screenW / 2
         local y = screenH - 60
-        font:DrawStringUTF8(displayText, x, y, KColor(1,1,1,1), 0, true)
+        fontObj.font:DrawStringUTF8(displayText, x, y, KColor(1,1,1,1), 0, true)
         -- 한글 테스트
-        font:DrawStringUTF8("테스트: 한글출력", 100, 100, KColor(1,1,1,1), 0, false)
+        fontObj.font:DrawStringUTF8("테스트: 한글출력", 100, 100, KColor(1,1,1,1), 0, false)
     end
 end
 

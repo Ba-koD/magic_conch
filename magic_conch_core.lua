@@ -1,68 +1,72 @@
+---@class MagicConch
 local MagicConch_Config = include("magic_conch_config")
+local MagicConch_Lang = include("magic_conch_lang")
 local MagicConch_MCM = include("magic_conch_mcm")
-local MagicConchStrings = include("translations")
 local MagicConch_Render = include("magic_conch_render")
 
-MagicConch = MagicConch or RegisterMod("Magic Conch", 1)
+local function printDebug(text)
+    Isaac.ConsoleOutput("[MagicConch][DEBUG] " .. tostring(text) .. "\n")
+end
+
+MagicConch = RegisterMod("Magic Conch", 1)
 MagicConch_Config.Init(MagicConch)
-local game = Game()
 
-Isaac.ConsoleOutput("Magic Conch v" .. MagicConch_Config.VERSION .. " initializing...\n")
-
+-- All callbacks, functions, and data are managed in core
 local displayText = nil
 local displayTimer = 0
-local DISPLAY_DURATION = 90 -- 1.5 seconds (based on 60 frames)
+local pendingDisplay = nil
+local pendingTimer = 0
+local DISPLAY_DURATION = 90 -- 3 seconds
+local DISPLAY_DELAY = 60   -- 2 seconds
 
-local function getCurrentLanguage()
-    if MagicConch.Config.language == "EN" or MagicConch.Config.language == "KO" then
-        return MagicConch.Config.language
-    end
-    if Options.Language and Options.Language == "ko_kr" then
-        return "KO"
-    end
-    return "EN"
-end
+local game = Game() -- Game instance
+local sfxManager = SFXManager() -- SFXManager instance
+local fontObj = { font = Font(), fontPath = nil }
 
-local function getRandomString()
-    local lang = getCurrentLanguage()
-    local pool = {}
-    for k, v in pairs(MagicConchStrings[lang]) do
-        table.insert(pool, v.text)
+-- Load font for the current language
+local function loadCurrentLanguageFont(config)
+    local langTable = MagicConch_Lang.getLanguageTable(config)
+    local fontPath = langTable.font
+    if fontObj.font and fontObj.fontPath == fontPath then
+        return fontObj
     end
-    local idx = math.random(1, #pool)
-    return pool[idx]
-end
-
-local function removeAllPickupsInRoom()
-    local room = game:GetRoom()
-    local entities = Isaac.GetRoomEntities()
-    for _, ent in ipairs(entities) do
-        if ent.Type == EntityType.ENTITY_PICKUP or ent.Type == EntityType.ENTITY_SLOT then
-            ent:Remove()
-        end
-        if ent.Type == EntityType.ENTITY_PICKUP and ent.Variant == PickupVariant.PICKUP_COLLECTIBLE then
-            ent:Remove()
-        end
+    local ok, err = pcall(function() fontObj.font:Load(fontPath) end)
+    if ok then
+        fontObj.fontPath = fontPath
+        printDebug("Font loaded: " .. tostring(fontPath))
+        printDebug("Font path: " .. tostring(fontObj.fontPath))
+        return fontObj
+    else
+        printDebug("Font load failed: " .. tostring(err))
+        printDebug("Font path: " .. tostring(fontObj.fontPath))
+        fontObj.font = nil
+        fontObj.fontPath = nil
+        return fontObj
     end
 end
 
 function MagicConch:OnHotkeyInput()
     if not MagicConch.Config.enabled then return end
-    local input = Input.IsButtonTriggered(MagicConch.Config.hotkey or Keyboard.KEY_M, 0)
+    if displayTimer > 0 or pendingTimer > 0 then return end
+
+    local input = Input.IsButtonTriggered(MagicConch.Config.hotkey, 0)
     if input then
         game:ShakeScreen(5)
-        SFXManager():Play(SoundEffect.SOUND_FORTUNE_COOKIE, 1.0, 0, false, 1.0)
-        local str = getRandomString()
-        displayText = str
-        displayTimer = DISPLAY_DURATION
-        if MagicConch.Config.resoluteMode then
-            removeAllPickupsInRoom()
-        end
+        sfxManager:Play(SoundEffect.SOUND_FORTUNE_COOKIE, 1.0, 0, false, 1.0)
+        pendingDisplay = MagicConch_Lang.getRandomString(MagicConch.Config)
+        pendingTimer = DISPLAY_DELAY
     end
 end
 
 function MagicConch:OnUpdate()
-    if displayTimer > 0 then
+    if pendingTimer > 0 then
+        pendingTimer = pendingTimer - 1
+        if pendingTimer == 0 then
+            displayText = pendingDisplay
+            displayTimer = DISPLAY_DURATION
+            pendingDisplay = nil
+        end
+    elseif displayTimer > 0 then
         displayTimer = displayTimer - 1
         if displayTimer == 0 then
             displayText = nil
@@ -71,18 +75,19 @@ function MagicConch:OnUpdate()
 end
 
 function MagicConch:OnRender()
-    MagicConch_Render:Render(MagicConch, displayText, displayTimer, getCurrentLanguage)
+    MagicConch_Render:Render(MagicConch, displayText, displayTimer, MagicConch_Lang, fontObj)
 end
 
 function MagicConch:OnGameStart(isSave)
     MagicConch_Config.Load(MagicConch)
-    MagicConch_MCM.Setup(MagicConch)
-    Isaac.ConsoleOutput("Magic Conch v" .. MagicConch_Config.VERSION .. " loaded!\n")
+    MagicConch_MCM.Setup(MagicConch, MagicConch_Lang, MagicConch_Config)
+    printDebug("Magic Conch v" .. MagicConch_Config.VERSION .. " loaded!")
+    loadCurrentLanguageFont(MagicConch.Config)
 end
 
 function MagicConch:OnGameExit()
     MagicConch_Config.Save(MagicConch)
-    Isaac.ConsoleOutput("Magic Conch v" .. MagicConch_Config.VERSION .. " settings saved.\n")
+    printDebug("Magic Conch v" .. MagicConch_Config.VERSION .. " settings saved.")
 end
 
 MagicConch:AddCallback(ModCallbacks.MC_POST_UPDATE, function() MagicConch:OnHotkeyInput() end)

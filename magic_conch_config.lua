@@ -1,12 +1,18 @@
+---@class MagicConchConfig
+---@field Init fun(mod: table): table
+---@field Load fun(mod: table): boolean
+---@field Save fun(mod: table)
+---@field Reset fun(mod: table)
 local MagicConch_Config = {}
 
-local VERSION = "1.0"
+local VERSION = "1.0" -- Version of the mod
 MagicConch_Config.VERSION = VERSION
 
+-- Default Config
 local DefaultConfig = {
     enabled = true,
     resoluteMode = false, -- Resolute Mode  
-    language = "auto",   -- "auto", "EN", "KO"
+    language = "Auto",   -- "Auto", "EN", "KR" (edit in magic_conch_lang.lua)
     hotkey = Keyboard.KEY_M,
     displayStyle = 0, -- 0: Fortune, 1: Rule-Style
     debugMode = false, -- Debug Mode
@@ -14,6 +20,7 @@ local DefaultConfig = {
     debugHudY = 40,    -- Debug HUD Y coordinate (default 40)
 }
 
+-- JSON library for saving and loading config
 local json = nil
 pcall(function() json = require("json") end)
 if not json then
@@ -23,8 +30,11 @@ if not json then
     }
 end
 
+-- Initialize the config table
+---@param mod table
+---@return table
 function MagicConch_Config.Init(mod)
-    mod.Config = mod.Config or {}
+    mod.Config = {}
     for k, v in pairs(DefaultConfig) do
         if mod.Config[k] == nil then
             mod.Config[k] = v
@@ -34,6 +44,9 @@ function MagicConch_Config.Init(mod)
     return mod.Config
 end
 
+-- Load the config
+---@param mod table
+---@return boolean
 function MagicConch_Config.Load(mod)
     if mod:HasData() then
         local ok, data = pcall(function() return json.decode(Isaac.LoadModData(mod)) end)
@@ -49,10 +62,12 @@ function MagicConch_Config.Load(mod)
     return false
 end
 
+-- Save the config
 function MagicConch_Config.Save(mod)
     Isaac.SaveModData(mod, json.encode(mod.Config))
 end
 
+-- Reset the config
 function MagicConch_Config.Reset(mod)
     for k, v in pairs(DefaultConfig) do
         mod.Config[k] = v
@@ -60,4 +75,5 @@ function MagicConch_Config.Reset(mod)
     MagicConch_Config.Save(mod)
 end
 
-return MagicConch_Config 
+---@type MagicConchConfig
+return MagicConch_Config
