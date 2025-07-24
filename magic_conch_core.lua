@@ -4,12 +4,20 @@ local MagicConch_Lang = include("magic_conch_lang")
 local MagicConch_MCM = include("magic_conch_mcm")
 local MagicConch_Render = include("magic_conch_render")
 
-local function printDebug(text)
+MagicConch = RegisterMod("Magic Conch", 1)
+MagicConch_Config.Init(MagicConch)
+
+MagicConch.printDebug = function(text)
     Isaac.ConsoleOutput("[MagicConch][DEBUG] " .. tostring(text) .. "\n")
 end
 
-MagicConch = RegisterMod("Magic Conch", 1)
-MagicConch_Config.Init(MagicConch)
+MagicConch.printError = function(text)
+    Isaac.ConsoleOutput("[MagicConch][ERROR] " .. tostring(text) .. "\n")
+end
+
+MagicConch.print = function(text)
+    Isaac.ConsoleOutput("[MagicConch] " .. tostring(text) .. "\n")
+end
 
 -- All callbacks, functions, and data are managed in core
 local displayText = nil
@@ -33,12 +41,12 @@ local function loadCurrentLanguageFont(config)
     local ok, err = pcall(function() fontObj.font:Load(fontPath) end)
     if ok then
         fontObj.fontPath = fontPath
-        printDebug("Font loaded: " .. tostring(fontPath))
-        printDebug("Font path: " .. tostring(fontObj.fontPath))
+        MagicConch.printDebug("Font loaded: " .. tostring(fontPath))
+        MagicConch.printDebug("Font path: " .. tostring(fontObj.fontPath))
         return fontObj
     else
-        printDebug("Font load failed: " .. tostring(err))
-        printDebug("Font path: " .. tostring(fontObj.fontPath))
+        MagicConch.printDebug("Font load failed: " .. tostring(err))
+        MagicConch.printDebug("Font path: " .. tostring(fontObj.fontPath))
         fontObj.font = nil
         fontObj.fontPath = nil
         return fontObj
@@ -81,13 +89,13 @@ end
 function MagicConch:OnGameStart(isSave)
     MagicConch_Config.Load(MagicConch)
     MagicConch_MCM.Setup(MagicConch, MagicConch_Lang, MagicConch_Config)
-    printDebug("Magic Conch v" .. MagicConch_Config.VERSION .. " loaded!")
+    MagicConch.print("Magic Conch v" .. MagicConch_Config.VERSION .. " loaded!")
     loadCurrentLanguageFont(MagicConch.Config)
 end
 
 function MagicConch:OnGameExit()
     MagicConch_Config.Save(MagicConch)
-    printDebug("Magic Conch v" .. MagicConch_Config.VERSION .. " settings saved.")
+    MagicConch.print("Magic Conch v" .. MagicConch_Config.VERSION .. " settings saved.")
 end
 
 MagicConch:AddCallback(ModCallbacks.MC_POST_UPDATE, function() MagicConch:OnHotkeyInput() end)
