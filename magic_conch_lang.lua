@@ -39,21 +39,26 @@ local MagicConchStrings = {
 -- @param config table Config table (e.g. MagicConch.Config)
 -- @return table Language table (e.g. { code = "EN", options = "en", name = "English" })
 local function getLanguageTable(config)
-    local result = LANGUAGE_MAP[1]
-    if config and config.language then
+    local result = LANGUAGE_MAP[1] -- Default: first language (EN)
+    
+    -- If config.language is not "Auto", use it directly
+    if config and config.language and config.language ~= "Auto" then
         for _, lang in ipairs(LANGUAGE_MAP) do
             if lang.code == config.language then
                 result = lang
+                break
             end
         end
-    end
-    if Options and Options.Language then
+    -- If config.language is "Auto" or not set, use Options.Language
+    elseif Options and Options.Language then
         for _, lang in ipairs(LANGUAGE_MAP) do
             if Options.Language == lang.options then
                 result = lang
+                break
             end
         end
     end
+    
     return result
 end
 

@@ -24,8 +24,8 @@ end
 
 function MagicConch_Render:Render(mod, displayText, displayTimer, MagicConch_Lang, fontObj)
     if mod and mod.Config and mod.Config.debugMode then
-        local x = mod.Config.debugHudX or 60
-        local y = mod.Config.debugHudY or 40
+        local x = mod.Config.debugHudX
+        local y = mod.Config.debugHudY
         local lineH = 18
         renderLine("=== MagicConch Debug ===", x, y, 255, 255, 0); y = y + lineH
         renderLine("Enabled: " .. tostring(mod.Config.enabled), x, y, 1, 1, 1); y = y + lineH
@@ -54,7 +54,7 @@ if Keyboard then
     for key, num in pairs(Keyboard) do
         local keyString = key
         local _, keyEnd = string.find(keyString, "KEY_")
-        keyString = string.sub(keyString, (keyEnd or 3) + 1)
+        keyString = string.sub(keyString, (keyEnd) + 1)
         keyString = string.gsub(keyString, "_", " ")
         KeyboardToString[num] = keyString
     end

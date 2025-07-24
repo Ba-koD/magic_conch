@@ -62,6 +62,8 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
             else
                 mod.Config.language = MagicConch_Lang.LANGUAGE_MAP[n].code
             end
+            -- Reload font when language changes
+            mod:ReloadFont()
         end,
         Info = {"Select the output language. (Default: Auto)"},
     })
@@ -78,7 +80,7 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
             return "Hotkey: " .. key
         end,
         OnChange = function(newKey)
-            mod.Config.hotkey = newKey or Keyboard.KEY_M
+            mod.Config.hotkey = newKey
         end,
         PopupGfx = ModConfigMenu.PopupGfx.WIDE_SMALL,
         PopupWidth = 280,
@@ -102,12 +104,12 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
     ModConfigMenu.AddText(category, "Display", "--- Display Options ---")
     ModConfigMenu.AddSetting(category, "Display", {
         Type = ModConfigMenu.OptionType.NUMBER,
-        CurrentSetting = function() return mod.Config.displayStyle or 0 end,
+        CurrentSetting = function() return mod.Config.displayStyle end,
         Minimum = 0,
         Maximum = 1,
         Display = function()
             local t = {"Fortune Machine Text", "Rule-Style"}
-            return "Display Style: " .. t[(mod.Config.displayStyle or 0) + 1]
+            return "Display Style: " .. t[(mod.Config.displayStyle) + 1]
         end,
         OnChange = function(n) mod.Config.displayStyle = n end,
         Info = {"Choose how to display the answer text."},
@@ -125,19 +127,19 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
     })
     ModConfigMenu.AddSetting(category, "Debug", {
         Type = ModConfigMenu.OptionType.NUMBER,
-        CurrentSetting = function() return mod.Config.debugHudX or 60 end,
+        CurrentSetting = function() return mod.Config.debugHudX end,
         Minimum = 0,
         Maximum = 800,
-        Display = function() return "Debug HUD X: " .. tostring(mod.Config.debugHudX or 60) end,
+        Display = function() return "Debug HUD X: " .. tostring(mod.Config.debugHudX) end,
         OnChange = function(n) mod.Config.debugHudX = n end,
         Info = {"Set the X position of the debug HUD."},
     })
     ModConfigMenu.AddSetting(category, "Debug", {
         Type = ModConfigMenu.OptionType.NUMBER,
-        CurrentSetting = function() return mod.Config.debugHudY or 40 end,
+        CurrentSetting = function() return mod.Config.debugHudY end,
         Minimum = 0,
         Maximum = 450,
-        Display = function() return "Debug HUD Y: " .. tostring(mod.Config.debugHudY or 40) end,
+        Display = function() return "Debug HUD Y: " .. tostring(mod.Config.debugHudY) end,
         OnChange = function(n) mod.Config.debugHudY = n end,
         Info = {"Set the Y position of the debug HUD."},
     })

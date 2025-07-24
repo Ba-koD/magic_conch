@@ -61,7 +61,7 @@ function MagicConch:OnHotkeyInput()
     if input then
         game:ShakeScreen(5)
         sfxManager:Play(SoundEffect.SOUND_FORTUNE_COOKIE, 1.0, 0, false, 1.0)
-        pendingDisplay = MagicConch_Lang.getRandomString(MagicConch.Config)
+        pendingDisplay = MagicConch_Lang.getRandomString(MagicConch.Config).text
         pendingTimer = DISPLAY_DELAY
     end
 end
@@ -83,7 +83,7 @@ function MagicConch:OnUpdate()
 end
 
 function MagicConch:OnRender()
-    MagicConch_Render:Render(MagicConch, displayText, displayTimer, MagicConch_Lang, fontObj)
+    MagicConch_Render:Render(MagicConch, displayText, displayTimer, MagicConch_Lang, fontObj, MagicConch.Config)
 end
 
 function MagicConch:OnGameStart(isSave)
@@ -96,6 +96,12 @@ end
 function MagicConch:OnGameExit()
     MagicConch_Config.Save(MagicConch)
     MagicConch.print("Magic Conch v" .. MagicConch_Config.VERSION .. " settings saved.")
+end
+
+function MagicConch:ReloadFont()
+    MagicConch.printDebug("ReloadFont called - Language: " .. tostring(MagicConch.Config.language))
+    loadCurrentLanguageFont(MagicConch.Config)
+    MagicConch.printDebug("ReloadFont completed - Font path: " .. tostring(fontObj.fontPath))
 end
 
 MagicConch:AddCallback(ModCallbacks.MC_POST_UPDATE, function() MagicConch:OnHotkeyInput() end)
