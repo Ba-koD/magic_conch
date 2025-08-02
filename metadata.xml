@@ -2,9 +2,33 @@
 <metadata>
     <name>Magic Conch</name>
     <directory>magic_conch</directory>
-    <id>0</id>
-    <description>마법의 소라고동에게 모든걸 맡겨보세요</description>
-    <version>1.0</version>
+    <id>3540206030</id>
+    <description>🐚 Magic Conch (마법의 소라고동)
+
+스폰지밥의 마법의 소라고동을 Isaac에서 사용가능한 모드입니다.
+
+주요 기능:
+소라고동 답변: 단축키(기본 N)를 누르면 긍정적/부정적/중립적 답변 제공
+타입별 효과: 답변에 따라 Isaac의 표정과 소리가 변화
+Resolute Mode: 부정적 답변 시 방의 모든 아이템 제거 (선택사항)
+다국어 지원: 한국어/영어 자동 감지 및 전환
+커스터마이징: 타이밍, 표시 스타일, 단축키 등 세부 설정 가능
+
+Mod Config Menu 호환
+
+---
+
+A mod that brings SpongeBob's Magic Conch to Isaac.
+
+Key Features:
+Magic Answers: Press hotkey(default N) to get positive/negative/neutral responses
+Type-based Effects: Isaac's expressions and sounds change based on answers
+Resolute Mode: Removes all items in room on negative answers (optional)
+Multi-language: Auto-detects Korean/English and switches accordingly
+Customizable: Adjustable timing, display style, hotkeys and more settings
+
+Compatible with Mod Config Menu</description>
+    <version>1.1</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
 </metadata>
