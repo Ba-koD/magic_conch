@@ -13,11 +13,19 @@ local DefaultConfig = {
     enabled = true,
     resoluteMode = false, -- Resolute Mode  
     language = "Auto",   -- "Auto", "EN", "KR" (edit in magic_conch_lang.lua)
-    hotkey = Keyboard.KEY_M,
-    displayStyle = 0, -- 0: Fortune, 1: Rule-Style
+    hotkey = Keyboard.KEY_N,
+    displayStyle = 1, -- 0: Fortune Machine Style, 1: Item-like Style
     debugMode = false, -- Debug Mode
     debugHudX = 60,    -- Debug HUD X coordinate (default 60)
     debugHudY = 40,    -- Debug HUD Y coordinate (default 40)
+    
+    -- Timing Settings (in frames, 30fps)
+    timing = {
+        shake = 15,        -- Screen Shake (0.5s)
+        wait = 45,         -- Wait Time (1.5s)
+        display = 60,     -- Display Time (2s)
+        cooldown = 0      -- Cooldown (0s)
+    }
 }
 
 -- JSON library for saving and loading config

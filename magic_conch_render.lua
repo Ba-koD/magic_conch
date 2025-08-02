@@ -1,25 +1,7 @@
 local MagicConch_Render = {}
 
 local function renderLine(text, x, y, r, g, b)
-    Isaac.RenderText(text, x, y, r or 1, g or 1, b or 1, 1)
-end
-
-local function RenderRuleStyleText(font, text, x, y, r, g, b, a, center)
-    if not text then return end
-    local str = tostring(text)
-    local width = font:GetStringWidth(str)
-    if center then
-        x = x - (width / 2)
-    end
-    local screenW = Isaac.GetScreenWidth()
-    local screenH = Isaac.GetScreenHeight()
-    if (x + width) > screenW then
-        x = x - ((x + width) - screenW)
-    end
-    if (y + 13) > screenH then
-        y = y - ((y + 13) - screenH)
-    end
-    font:DrawStringUTF8(str, x, y, KColor(r, g, b, a), 0, true)
+    Isaac.RenderText(text, x, y, r, g, b, 1)
 end
 
 function MagicConch_Render:Render(mod, displayText, displayTimer, MagicConch_Lang, fontObj)
@@ -36,16 +18,6 @@ function MagicConch_Render:Render(mod, displayText, displayTimer, MagicConch_Lan
         renderLine("Language: " .. tostring(MagicConch_Lang.getLanguageTable(mod.Config).name), x, y, 1, 1, 1); y = y + lineH
         renderLine("Options.Language: " .. tostring(Options.Language), x, y, 1, 1, 1); y = y + lineH
         renderLine("fontObj.fontPath: " .. tostring(fontObj.fontPath), x, y, 1, 1, 1); y = y + lineH
-    end
-
-    if fontObj and fontObj.font and displayText then
-        local screenW = Isaac.GetScreenWidth()
-        local screenH = Isaac.GetScreenHeight()
-        local x = screenW / 2
-        local y = screenH - 60
-        fontObj.font:DrawStringUTF8(displayText, x, y, KColor(1,1,1,1), 0, true)
-        -- 한글 테스트
-        fontObj.font:DrawStringUTF8("테스트: 한글출력", 100, 100, KColor(1,1,1,1), 0, false)
     end
 end
 
@@ -67,4 +39,4 @@ function MagicConch_Render:HotkeyToString(hotkey)
     return tostring(hotkey)
 end
 
-return MagicConch_Render 
+return MagicConch_Render

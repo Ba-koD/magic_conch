@@ -5,33 +5,70 @@
 
 ---@type MagicConchLang
 local LANGUAGE_MAP = {
-    { code = "EN", options = "en", name = "English", font = "resources/font/EnglishFont.fnt" },
-    { code = "KR", options = "kr", name = "Korean", font = "resources/font/Kkubulim.fnt" },
+    { code = "EN", options = "en", name = "English", font = "gfx/font/Kkubulim.fnt" },
+    { code = "KR", options = "kr", name = "Korean", font = "gfx/font/Kkubulim.fnt" },
     -- Add more languages here
+    -- Font Feature will be added later
 }
 
 -- Translation strings for Magic Conch mod
 -- @param language string Language code (e.g. "EN" or "KR")
 -- @return table MagicConchStrings table (e.g. { text = "Maybe someday.", type = "neutral" })
 local MagicConchStrings = {
-    EN = { -- English translations
-        MaybeSomeday = {text = "Maybe someday.", type = "neutral"},
-        Nothing = {text = "Nothing.", type = "negative"},
-        Neither = {text = "Neither.", type = "negative"},
-        IDontThinkSo = {text = "I don't think so.", type = "negative"},
-        Yes = {text = "Yes.", type = "positive"},
-        TryAgain = {text = "Try asking again.", type = "neutral"},
-        No = {text = "No.", type = "negative"},
+    EN = { -- English Translations (8:8:4 ratio, 20 total)
+    -- Positive responses (8 total)
+    Yes = {text = "Yes.", type = "positive"},
+    Absolutely = {text = "Absolutely.", type = "positive"},
+    Definitely = {text = "Definitely.", type = "positive"},
+    OfCourse = {text = "Of course.", type = "positive"},
+    FollowTheConch = {text = "Follow the conch.", type = "positive"},
+    ConchKnowsAll = {text = "The conch knows everything.", type = "positive"},
+    YouMay = {text = "You may.", type = "positive"},
+    Proceed = {text = "Proceed.", type = "positive"},
+
+    -- Negative responses (8 total)
+    Nothing = {text = "Do nothing.", type = "negative"},
+    Neither = {text = "Neither.", type = "negative"},
+    IDontThinkSo = {text = "I don't think so.", type = "negative"},
+    No = {text = "No.", type = "negative"},
+    DontEvenAsk = {text = "Don't even ask.", type = "negative"},
+    NotToday = {text = "Not today.", type = "negative"},
+    Forbidden = {text = "Forbidden.", type = "negative"},
+    Impossible = {text = "Impossible.", type = "negative"},
+
+    -- Neutral responses (4 total)
+    AskAgainLater = {text = "Ask again later.", type = "neutral"},
+    UncertainTimes = {text = "Uncertain times.", type = "neutral"},
+    MaybeSomeday = {text = "Maybe someday.", type = "neutral"},
+    TryAgain = {text = "Try again.", type = "neutral"},
     },
-    KR = { -- Korean translations
-        MaybeSomeday = {text = "언젠가는 하겠죠.", type = "neutral"},
-        Nothing = {text = "가만있어요.", type = "negative"},
-        Neither = {text = "다 안 돼요.", type = "negative"},
-        IDontThinkSo = {text = "그것도 안 돼요.", type = "negative"},
-        Yes = {text = "좋아요.", type = "positive"},
-        TryAgain = {text = "다시 한 번 물어봐요.", type = "neutral"},
-        No = {text = "안 돼요.", type = "negative"},
-    }
+    KR = { -- Korean Translations (8:8:4 ratio for 20 total)
+    -- Positive responses (8 total)
+    Yes = {text = "좋아.", type = "positive"},
+    Absolutely = {text = "물론.", type = "positive"},
+    Definitely = {text = "확실해.", type = "positive"},
+    OfCourse = {text = "당연하지.", type = "positive"},
+    FollowTheConch = {text = "소라고동을 따라.", type = "positive"},
+    ConchKnowsAll = {text = "소라고동은 모든 걸 알아.", type = "positive"},
+    YouMay = {text = "해도 돼.", type = "positive"},
+    Proceed = {text = "진행해.", type = "positive"},
+    
+    -- Negative responses (8 total)
+    Nothing = {text = "가만있어.", type = "negative"},
+    Neither = {text = "다 안 돼.", type = "negative"},
+    IDontThinkSo = {text = "그것도 안 돼.", type = "negative"},
+    No = {text = "안 돼.", type = "negative"},
+    DontEvenAsk = {text = "묻지도 마.", type = "negative"},
+    NotToday = {text = "오늘은 절대 안 돼.", type = "negative"},
+    Forbidden = {text = "금지야.", type = "negative"},
+    Impossible = {text = "불가능해.", type = "negative"},
+    
+    -- Neutral responses (4 total)
+    AskAgainLater = {text = "나중에 다시 물어봐.", type = "neutral"},
+    UncertainTimes = {text = "불분명한 시기야.", type = "neutral"},
+    MaybeSomeday = {text = "언젠가는 하겠지.", type = "neutral"},
+    TryAgain = {text = "다시 한 번 물어봐.", type = "neutral"},
+    },
     -- Add more translations here
 }
 

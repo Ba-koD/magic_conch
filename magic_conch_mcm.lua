@@ -64,6 +64,8 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
             end
             -- Reload font when language changes
             mod:ReloadFont()
+            -- 설정 즉시 저장
+            MagicConch_Config.Save(mod)
         end,
         Info = {"Select the output language. (Default: Auto)"},
     })
@@ -74,13 +76,22 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         CurrentSetting = function() return mod.Config.hotkey end,
         Display = function()
             local key = "None"
-            if InputHelper and InputHelper.KeyboardToString[mod.Config.hotkey] then
-                key = InputHelper.KeyboardToString[mod.Config.hotkey]
+            if mod.Config.hotkey > -1 then
+                if InputHelper and InputHelper.KeyboardToString[mod.Config.hotkey] then
+                    key = InputHelper.KeyboardToString[mod.Config.hotkey]
+                else
+                    local MagicConch_Render = include("magic_conch_render")
+                    key = MagicConch_Render:HotkeyToString(mod.Config.hotkey)
+                end
             end
             return "Hotkey: " .. key
         end,
         OnChange = function(newKey)
+            if newKey == -1 then
+                return
+            end
             mod.Config.hotkey = newKey
+            MagicConch_Config.Save(mod)
         end,
         PopupGfx = ModConfigMenu.PopupGfx.WIDE_SMALL,
         PopupWidth = 280,
@@ -99,6 +110,90 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         Info = {"Press a button on your keyboard to change this setting."},
     })
 
+    -- Timing Category
+    ModConfigMenu.AddSpace(category, "Timing")
+    ModConfigMenu.AddText(category, "Timing", "--- Timing Settings ---")
+    
+    -- Shake Duration
+    ModConfigMenu.AddSetting(category, "Timing", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function() return math.floor(mod.Config.timing.shake / 5) end,
+        Minimum = 1,
+        Maximum = 12,
+        ModifyBy = 1,
+        Display = function()
+            local frames = mod.Config.timing.shake
+            local seconds = math.floor(frames / 30 * 10) / 10
+            return "Screen Shake: " .. frames .. " frames (" .. seconds .. "s)"
+        end,
+        OnChange = function(n) 
+            mod.Config.timing.shake = n * 5 
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"Duration of screen shake effect when activated.", "Adjusts in 5 frame increments."},
+    })
+    
+    -- Wait Duration
+    ModConfigMenu.AddSetting(category, "Timing", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function() return math.floor(mod.Config.timing.wait / 5) end,
+        Minimum = 1,
+        Maximum = 36,
+        ModifyBy = 1,
+        Display = function()
+            local frames = mod.Config.timing.wait
+            local seconds = math.floor(frames / 30 * 10) / 10
+            return "Wait Time: " .. frames .. " frames (" .. seconds .. "s)"
+        end,
+        OnChange = function(n) 
+            mod.Config.timing.wait = n * 5 
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"Time to wait before showing the answer text.", "Adjusts in 5 frame increments."},
+    })
+    
+    -- Display Duration
+    ModConfigMenu.AddSetting(category, "Timing", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function() return math.floor(mod.Config.timing.display / 5) end,
+        Minimum = 6,
+        Maximum = 60,
+        ModifyBy = 1,
+        Display = function()
+            local frames = mod.Config.timing.display
+            local seconds = math.floor(frames / 30 * 10) / 10
+            return "Display Time: " .. frames .. " frames (" .. seconds .. "s)"
+        end,
+        OnChange = function(n) 
+            mod.Config.timing.display = n * 5 
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"How long the answer text stays visible.", "Adjusts in 5 frame increments."},
+    })
+    
+    -- Cooldown Duration
+    ModConfigMenu.AddSetting(category, "Timing", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function() return math.floor(mod.Config.timing.cooldown / 5) end,
+        Minimum = 0,
+        Maximum = 36,
+        ModifyBy = 1,
+        Display = function()
+            local frames = mod.Config.timing.cooldown
+            if frames == 0 then
+                return "Cooldown: None"
+            else
+                local seconds = math.floor(frames / 30 * 10) / 10
+                return "Cooldown: " .. frames .. " frames (" .. seconds .. "s)"
+            end
+        end,
+        OnChange = function(n) 
+            mod.Config.timing.cooldown = n * 5 
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"Cooldown time before you can use Magic Conch again.", "Set to 0 for no cooldown.", "Adjusts in 5 frame increments."},
+    })
+
     -- Display Category
     ModConfigMenu.AddSpace(category, "Display")
     ModConfigMenu.AddText(category, "Display", "--- Display Options ---")
@@ -108,11 +203,14 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         Minimum = 0,
         Maximum = 1,
         Display = function()
-            local t = {"Fortune Machine Text", "Rule-Style"}
+            local t = {"Fortune Machine Style", "Item-like Style"}
             return "Display Style: " .. t[(mod.Config.displayStyle) + 1]
         end,
-        OnChange = function(n) mod.Config.displayStyle = n end,
-        Info = {"Choose how to display the answer text."},
+        OnChange = function(n) 
+            mod.Config.displayStyle = n 
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"Fortune Machine: Shows text like fortune teller machine", "Item-like: Shows main text with type subtitle like item pickup"},
     })
 
     -- Debug Category
@@ -122,7 +220,10 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         Type = ModConfigMenu.OptionType.BOOLEAN,
         CurrentSetting = function() return mod.Config.debugMode end,
         Display = function() return "Debug Mode: " .. (mod.Config.debugMode and "ON" or "OFF") end,
-        OnChange = function(b) mod.Config.debugMode = b end,
+        OnChange = function(b) 
+            mod.Config.debugMode = b 
+            MagicConch_Config.Save(mod)
+        end,
         Info = {"Enable debug output for font loading and rendering."},
     })
     ModConfigMenu.AddSetting(category, "Debug", {
@@ -131,7 +232,10 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         Minimum = 0,
         Maximum = 800,
         Display = function() return "Debug HUD X: " .. tostring(mod.Config.debugHudX) end,
-        OnChange = function(n) mod.Config.debugHudX = n end,
+        OnChange = function(n) 
+            mod.Config.debugHudX = n 
+            MagicConch_Config.Save(mod)
+        end,
         Info = {"Set the X position of the debug HUD."},
     })
     ModConfigMenu.AddSetting(category, "Debug", {
@@ -140,7 +244,10 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         Minimum = 0,
         Maximum = 450,
         Display = function() return "Debug HUD Y: " .. tostring(mod.Config.debugHudY) end,
-        OnChange = function(n) mod.Config.debugHudY = n end,
+        OnChange = function(n) 
+            mod.Config.debugHudY = n 
+            MagicConch_Config.Save(mod)
+        end,
         Info = {"Set the Y position of the debug HUD."},
     })
 

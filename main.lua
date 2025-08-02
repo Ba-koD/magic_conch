@@ -3,7 +3,7 @@ require("magic_conch_core")
 
 -----------------------------------------------------------
 ----=         Magic Conch Mod               =----
-----=    Makes familiar cubes/balls smarter          =----
+----=    A Magic 8-Ball for Isaac           =----
 ----=        Version managed in magic_conch_config.lua       =----
 -----------------------------------------------------------
 
