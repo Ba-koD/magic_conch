@@ -9,7 +9,9 @@ MagicConch = RegisterMod("Magic Conch", 1)
 MagicConch_Config.Init(MagicConch)
 
 MagicConch.printDebug = function(text)
-    Isaac.ConsoleOutput("[MagicConch][DEBUG] " .. tostring(text) .. "\n")
+    if MagicConch.Config.debugMode then
+        Isaac.ConsoleOutput("[MagicConch][DEBUG] " .. tostring(text) .. "\n")
+    end
 end
 
 MagicConch.printError = function(text)
@@ -283,32 +285,28 @@ function MagicConch:ReloadFont()
 end
 
 function MagicConch:OnGameStart(isSave)
-    MagicConch.print("Magic Conch 초기화 시작...")
-    
     MagicConch_Config.Load(MagicConch)
     MagicConch_MCM.Setup(MagicConch, MagicConch_Lang, MagicConch_Config)
     
     -- Initialize API module
-    MagicConch.print("API 모듈 초기화 중...")
     MagicConch_API.Init(MagicConch, gameState, getTiming, MagicConch_Lang, MagicConch_Config)
     
     loadCurrentLanguageFont(MagicConch.Config)
     resetGameState()
     
-    -- API 인터페이스 즉시 생성
+    -- API interface immediately created
     if not MagicConch.API then
         MagicConch.API = MagicConch_API.CreateInterface()
-        MagicConch.print("Magic Conch API 인터페이스가 생성되었습니다!")
         
         -- API 준비 상태 확인
         if MagicConch.API.IsReady() then
-            MagicConch.print("Magic Conch API가 완전히 준비되었습니다!")
+            MagicConch.print("Magic Conch API is ready!")
         else
-            MagicConch.printError("Magic Conch API 준비 과정에서 문제가 발생했습니다!")
+            MagicConch.printError("Magic Conch API initialization failed!")
         end
     end
     
-    MagicConch.print("Magic Conch v" .. MagicConch_Config.VERSION .. " 로드 완료!")
+    MagicConch.print("Magic Conch v" .. MagicConch_Config.VERSION .. " loaded!")
 end
 
 function MagicConch:OnNewRoom()

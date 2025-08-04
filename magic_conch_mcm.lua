@@ -64,7 +64,6 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
             end
             -- Reload font when language changes
             mod:ReloadFont()
-            -- 설정 즉시 저장
             MagicConch_Config.Save(mod)
         end,
         Info = {"Select the output language. (Default: Auto)"},

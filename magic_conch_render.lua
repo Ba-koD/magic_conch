@@ -4,8 +4,6 @@ local function renderLine(text, x, y, r, g, b)
     Isaac.RenderText(text, x, y, r, g, b, 1)
 end
 
-
-
 function MagicConch_Render:Render(mod, displayText, displayTimer, MagicConch_Lang, fontObj)
     if mod and mod.Config and mod.Config.debugMode then
         local x = mod.Config.debugHudX
