@@ -72,8 +72,11 @@ end
 
 function MagicConch_Render:Render(mod, displayText, displayTimer, MagicConch_Lang, fontObj)
     -- Always render room attempts counter (as requested - no toggle option)
+    if not mod.Config.enabled then
+        return
+    end
+
     self:RenderRoomAttempts(mod)
-    
     if mod and mod.Config and mod.Config.debugMode then
         local x = mod.Config.debugHudX
         local y = mod.Config.debugHudY
