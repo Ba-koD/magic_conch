@@ -18,6 +18,7 @@ local DefaultConfig = {
     debugMode = false, -- Debug Mode
     debugHudX = 60,    -- Debug HUD X coordinate (default 60)
     debugHudY = 40,    -- Debug HUD Y coordinate (default 40)
+    attemptsPerRoom = 0, -- Number of attempts allowed per room (0 = unlimited)
     
     -- Timing Settings (in frames, 30fps)
     timing = {

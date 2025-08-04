@@ -36,11 +36,49 @@ local gameState = {
     -- API Fields
     lastResult = nil,
     lastResultTime = 0,
-    callbacks = {}
+    callbacks = {},
+    -- Room usage tracking
+    roomUsageCount = {}, -- { [roomKey] = usageCount }
+    currentRoomKey = nil
 }
 
 local function getTiming()
     return MagicConch.Config.timing
+end
+
+-- Get unique room key based on stage, stage type, and room index
+local function getCurrentRoomKey()
+    local level = Game():GetLevel()
+    local stage = level:GetStage()           -- Stage number (1=Basement, 2=Caves, etc.)
+    local stageType = level:GetStageType()   -- Stage type (0=normal, 1=alt, etc.)
+    local roomIndex = level:GetCurrentRoomIndex()
+    
+    -- Create unique key: "stage_stageType_roomIndex"
+    return tostring(stage) .. "_" .. tostring(stageType) .. "_" .. tostring(roomIndex)
+end
+
+-- Get current room usage count
+local function getCurrentRoomUsage()
+    local roomKey = getCurrentRoomKey()
+    return gameState.roomUsageCount[roomKey] or 0
+end
+
+-- Check if we can use Magic Conch in current room
+local function canUseMagicConchInRoom()
+    local maxAttempts = MagicConch.Config.attemptsPerRoom
+    -- 0 means unlimited usage
+    if maxAttempts == 0 then
+        return true
+    end
+    local currentUsage = getCurrentRoomUsage()
+    return currentUsage < maxAttempts
+end
+
+-- Increment room usage count
+local function incrementRoomUsage()
+    local roomKey = getCurrentRoomKey()
+    gameState.roomUsageCount[roomKey] = (gameState.roomUsageCount[roomKey] or 0) + 1
+    gameState.currentRoomKey = roomKey
 end
 
 -- Remove all pickups and items in the current room (Resolute Mode)
@@ -259,8 +297,24 @@ function MagicConch:OnHotkeyInput()
 
     local input = Input.IsButtonTriggered(MagicConch.Config.hotkey, 0)
     if input then
+        -- Check room usage limit only when key is pressed
+        if not canUseMagicConchInRoom() then
+            -- Play error buzz sound when limit is reached
+            local sfxManager = SFXManager()
+            sfxManager:Play(SoundEffect.SOUND_BOSS2INTRO_ERRORBUZZ, 0.5) -- Lower volume for feedback
+            
+            if MagicConch.Config.debugMode then
+                local currentUsage = getCurrentRoomUsage()
+                local maxAttempts = MagicConch.Config.attemptsPerRoom
+                MagicConch.printDebug("Room usage limit reached: " .. currentUsage .. "/" .. maxAttempts .. " - Error sound played")
+            end
+            return
+        end
+        
         -- Additional safety check: check if state is usable
         if (gameState.state == "idle" or gameState.state == "displaying") and gameState.canInput then
+            -- Increment room usage before executing
+            incrementRoomUsage()
             MagicConch_API.ExecuteMagicConchSequence("hotkey")
         end
     end
@@ -274,14 +328,18 @@ function MagicConch:OnUpdate()
 end
 
 function MagicConch:OnRender()
-    if MagicConch.Config.debugMode then
-        MagicConch_Render:Render(MagicConch, nil, 0, MagicConch_Lang, fontObj)
-    end
+    -- Always render (for room attempts counter)
+    MagicConch_Render:Render(MagicConch, nil, 0, MagicConch_Lang, fontObj)
 end
 
 -- ReloadFont
 function MagicConch:ReloadFont()
     loadCurrentLanguageFont(self.Config)
+end
+
+-- Public function to get current room usage (for render module)
+function MagicConch:GetCurrentRoomUsage()
+    return getCurrentRoomUsage()
 end
 
 function MagicConch:OnGameStart(isSave)
@@ -293,6 +351,9 @@ function MagicConch:OnGameStart(isSave)
     
     loadCurrentLanguageFont(MagicConch.Config)
     resetGameState()
+    
+    -- Initialize current room key
+    gameState.currentRoomKey = getCurrentRoomKey()
     
     -- API interface immediately created
     if not MagicConch.API then
@@ -311,6 +372,8 @@ end
 
 function MagicConch:OnNewRoom()
     resetGameState()
+    -- Update current room key when entering new room
+    gameState.currentRoomKey = getCurrentRoomKey()
 end
 
 function MagicConch:OnGameExit()

@@ -254,8 +254,8 @@ function MagicConch_API.TriggerMagicConch(modName)
     local timing = getTiming()
     result.estimatedTime = timing.shake + timing.wait + timing.display
     result.pendingResult = {
-        text = randomData.text,
-        type = randomData.type,
+        text = gameState.pendingText,
+        type = gameState.pendingType,
         willDisplayIn = timing.shake + timing.wait
     }
     

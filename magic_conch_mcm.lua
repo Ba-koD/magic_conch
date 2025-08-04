@@ -26,6 +26,27 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         OnChange = function(b) mod.Config.resoluteMode = b end,
     })
 
+    -- Attempts per Room
+    ModConfigMenu.AddSetting(category, "General", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function() return mod.Config.attemptsPerRoom end,
+        Minimum = 0,
+        Maximum = 10,
+        Display = function() 
+            local attempts = mod.Config.attemptsPerRoom
+            if attempts == 0 then
+                return "Attempts per Room: Unlimited"
+            else
+                return "Attempts per Room: " .. tostring(attempts)
+            end
+        end,
+        OnChange = function(n) 
+            mod.Config.attemptsPerRoom = n 
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"Number of times you can use Magic Conch per room.", "Set to 0 for unlimited usage."},
+    })
+
     -- Language Selection (0:Auto, 1:EN, 2:KR ...)
     ModConfigMenu.AddSetting(category, "General", {
         Type = ModConfigMenu.OptionType.NUMBER,
