@@ -46,15 +46,21 @@ local function getTiming()
     return MagicConch.Config.timing
 end
 
--- Get unique room key based on stage, stage type, and room index
+-- Get completely unique room key using Isaac's built-in unique identifiers
 local function getCurrentRoomKey()
     local level = Game():GetLevel()
-    local stage = level:GetStage()           -- Stage number (1=Basement, 2=Caves, etc.)
-    local stageType = level:GetStageType()   -- Stage type (0=normal, 1=alt, etc.)
-    local roomIndex = level:GetCurrentRoomIndex()
+    local room = Game():GetRoom()
+    local roomDesc = level:GetCurrentRoomDesc()
     
-    -- Create unique key: "stage_stageType_roomIndex"
-    return tostring(stage) .. "_" .. tostring(stageType) .. "_" .. tostring(roomIndex)
+    -- Use multiple unique identifiers to create absolutely unique key
+    local decorationSeed = room:GetDecorationSeed()  -- Unique decoration seed for this room
+    local spawnSeed = room:GetSpawnSeed()            -- Unique spawn seed for this room
+    local roomIndex = level:GetCurrentRoomIndex()    -- Room index
+    local stage = level:GetStage()                   -- Stage number
+    local stageType = level:GetStageType()           -- Stage type
+    
+    -- Create absolutely unique key using seeds
+    return tostring(stage) .. "_" .. tostring(stageType) .. "_" .. tostring(roomIndex) .. "_" .. tostring(decorationSeed) .. "_" .. tostring(spawnSeed)
 end
 
 -- Get current room usage count
@@ -165,6 +171,15 @@ local function resetGameState()
     gameState.pendingText = nil
     gameState.pendingType = nil
     gameState.lastInputTime = 0
+end
+
+-- Reset room usage count (for new games and new levels)
+local function resetRoomUsageCount()
+    gameState.roomUsageCount = {}
+    gameState.currentRoomKey = nil
+    if MagicConch.Config.debugMode then
+        MagicConch.printDebug("Room usage count reset")
+    end
 end
 
 local stateHandlers = {
@@ -313,9 +328,22 @@ function MagicConch:OnHotkeyInput()
         
         -- Additional safety check: check if state is usable
         if (gameState.state == "idle" or gameState.state == "displaying") and gameState.canInput then
-            -- Increment room usage before executing
-            incrementRoomUsage()
-            MagicConch_API.ExecuteMagicConchSequence("hotkey")
+            -- Execute Magic Conch sequence first
+            local success = MagicConch_API.ExecuteMagicConchSequence("hotkey")
+            
+            -- Only increment room usage if execution was successful
+            if success then
+                incrementRoomUsage()
+                if MagicConch.Config.debugMode then
+                    local currentUsage = getCurrentRoomUsage()
+                    local maxAttempts = MagicConch.Config.attemptsPerRoom
+                    MagicConch.printDebug("Magic Conch executed successfully, usage: " .. currentUsage .. "/" .. maxAttempts)
+                end
+            else
+                if MagicConch.Config.debugMode then
+                    MagicConch.printDebug("Magic Conch execution failed, usage count unchanged")
+                end
+            end
         end
     end
 end
@@ -352,6 +380,9 @@ function MagicConch:OnGameStart(isSave)
     loadCurrentLanguageFont(MagicConch.Config)
     resetGameState()
     
+    -- Reset room usage count on new game start
+    resetRoomUsageCount()
+    
     -- Initialize current room key
     gameState.currentRoomKey = getCurrentRoomKey()
     
@@ -376,6 +407,19 @@ function MagicConch:OnNewRoom()
     gameState.currentRoomKey = getCurrentRoomKey()
 end
 
+function MagicConch:OnNewLevel()
+    -- Reset room usage count when entering new level (floor)
+    resetRoomUsageCount()
+    resetGameState()
+    
+    if MagicConch.Config.debugMode then
+        local level = Game():GetLevel()
+        local stage = level:GetStage()
+        local stageType = level:GetStageType()
+        MagicConch.printDebug("New level started - Stage: " .. stage .. ", Type: " .. stageType)
+    end
+end
+
 function MagicConch:OnGameExit()
     MagicConch_Config.Save(MagicConch)
 end
@@ -385,6 +429,7 @@ MagicConch:AddCallback(ModCallbacks.MC_POST_UPDATE, MagicConch.OnHotkeyInput)
 MagicConch:AddCallback(ModCallbacks.MC_POST_UPDATE, MagicConch.OnUpdate)
 MagicConch:AddCallback(ModCallbacks.MC_POST_RENDER, MagicConch.OnRender)
 MagicConch:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, MagicConch.OnGameStart)
+MagicConch:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, MagicConch.OnNewLevel)
 MagicConch:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, MagicConch.OnNewRoom)
 MagicConch:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, MagicConch.OnGameExit)
 
