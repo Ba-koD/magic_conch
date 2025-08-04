@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metadata>
     <name>Magic Conch</name>
-    <directory>magic_conch</directory>
+    <directory>!magic_conch</directory>
     <id>3540206030</id>
     <description>🐚 Magic Conch (마법의 소라고동)
 
@@ -28,7 +28,7 @@ Multi-language: Auto-detects Korean/English and switches accordingly
 Customizable: Adjustable timing, display style, hotkeys and more settings
 
 Compatible with Mod Config Menu</description>
-    <version>1.1</version>
+    <version>1.2</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
 </metadata>

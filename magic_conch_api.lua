@@ -105,12 +105,53 @@ end
 
 -- Execute callback function (internal use)
 local function executeCallbacks(result)
+    if not gameState.callbacks or #gameState.callbacks == 0 then
+        MagicConch.printDebug("No callbacks registered")
+        return
+    end
+    
+    MagicConch.printDebug("Executing " .. #gameState.callbacks .. " registered callbacks")
+    
+    -- Create a safe copy of the result to prevent modification
+    local safeResult = {
+        text = result.text,
+        type = result.type,
+        timestamp = result.timestamp,
+        displayStyle = result.displayStyle,
+        -- Add additional metadata
+        source = "Magic Conch",
+        version = MagicConch_Config and MagicConch_Config.VERSION or "unknown"
+    }
+    
+    local successCount = 0
+    local errorCount = 0
+    
     for i, callbackData in ipairs(gameState.callbacks) do
-        local ok, err = pcall(callbackData.func, result)
-        if not ok then
-            MagicConch.printError("Callback error for " .. callbackData.modName .. ": " .. tostring(err))
+        local ok, err = pcall(function()
+            if type(callbackData.func) == "function" then
+                callbackData.func(safeResult)
+                return true
+            else
+                error("Callback is not a function")
+            end
+        end)
+        
+        if ok then
+            successCount = successCount + 1
+            MagicConch.printDebug("Callback executed successfully for: " .. (callbackData.modName or "unknown"))
+        else
+            errorCount = errorCount + 1
+            MagicConch.printError("Callback error for " .. (callbackData.modName or "unknown") .. ": " .. tostring(err))
+            
+            -- Remove invalid callbacks
+            if string.find(tostring(err), "not a function") then
+                MagicConch.printError("Removing invalid callback for: " .. (callbackData.modName or "unknown"))
+                table.remove(gameState.callbacks, i)
+            end
         end
     end
+    
+    MagicConch.printDebug("Callback execution complete - Success: " .. successCount .. ", Errors: " .. errorCount)
 end
 
 -- ===== Public API Functions =====
@@ -124,19 +165,42 @@ end
 -- - Success: "Callback registered for: [modName]" (debug log)
 -- - Error: "RegisterCallback: callback must be a function" (error log)
 function MagicConch_API.RegisterCallback(callback, modName)
+    -- Validate inputs
     if type(callback) ~= "function" then
-        MagicConch.printError("RegisterCallback: callback must be a function")
+        MagicConch.printError("RegisterCallback: callback must be a function, got " .. type(callback))
         return false
     end
     
+    -- Default mod name if not provided
+    if not modName or type(modName) ~= "string" or modName == "" then
+        modName = "Unknown Mod"
+    end
+    
+    -- Check for duplicate registrations from the same mod
+    for i, existingCallback in ipairs(gameState.callbacks) do
+        if existingCallback.modName == modName then
+            MagicConch.printDebug("Replacing existing callback for: " .. modName)
+            gameState.callbacks[i] = {
+                func = callback,
+                modName = modName,
+                registeredTime = Game():GetFrameCount(),
+                id = existingCallback.id or math.random(1000000)
+            }
+            return true
+        end
+    end
+    
+    -- Create new callback registration
     local callbackData = {
         func = callback,
         modName = modName,
-        registeredTime = Game():GetFrameCount()
+        registeredTime = Game():GetFrameCount(),
+        id = math.random(1000000) -- Unique ID for debugging
     }
     
     table.insert(gameState.callbacks, callbackData)
-    MagicConch.printDebug("Callback registered for: " .. callbackData.modName)
+    MagicConch.printDebug("Callback registered for: " .. modName .. " (ID: " .. callbackData.id .. ")")
+    MagicConch.print("API: " .. modName .. " has been connected to Magic Conch!")
     return true
 end
 
@@ -209,6 +273,53 @@ function MagicConch_API.ExecuteMagicConchSequence(triggerSource)
     return executeMagicConchSequence(triggerSource)
 end
 
+-- Remove callback registration
+-- @param modName string - Mod name to remove
+-- @return boolean - Success or failure
+function MagicConch_API.UnregisterCallback(modName)
+    if not modName or type(modName) ~= "string" then
+        MagicConch.printError("UnregisterCallback: modName must be a string")
+        return false
+    end
+    
+    for i = #gameState.callbacks, 1, -1 do
+        if gameState.callbacks[i].modName == modName then
+            table.remove(gameState.callbacks, i)
+            MagicConch.printDebug("Callback unregistered for: " .. modName)
+            return true
+        end
+    end
+    
+    MagicConch.printDebug("No callback found to unregister for: " .. modName)
+    return false
+end
+
+-- Get callback information
+-- @return table - List of registered callbacks
+function MagicConch_API.GetCallbackInfo()
+    local info = {
+        count = #gameState.callbacks,
+        callbacks = {}
+    }
+    
+    for i, callbackData in ipairs(gameState.callbacks) do
+        table.insert(info.callbacks, {
+            modName = callbackData.modName,
+            id = callbackData.id,
+            registeredTime = callbackData.registeredTime,
+            isValid = type(callbackData.func) == "function"
+        })
+    end
+    
+    return info
+end
+
+-- Get last result
+-- @return table - Last Magic Conch result or nil
+function MagicConch_API.GetLastResult()
+    return gameState.lastResult
+end
+
 -- Create public API interface
 function MagicConch_API.CreateInterface()
     return {
@@ -219,6 +330,13 @@ function MagicConch_API.CreateInterface()
             return MagicConch_API.RegisterCallback(callback, modName) 
         end,
         
+        -- Unregister callback: Remove callback registration
+        -- Input: modName (string)
+        -- Output: boolean (success or failure)
+        UnregisterCallback = function(modName)
+            return MagicConch_API.UnregisterCallback(modName)
+        end,
+        
         -- Trigger Magic Conch: Execute Magic Conch programmatically
         -- Input: modName (string, optional)
         -- Output: table { success, reason, estimatedTime, pendingResult }
@@ -226,11 +344,39 @@ function MagicConch_API.CreateInterface()
             return MagicConch_API.TriggerMagicConch(modName) 
         end,
         
+        -- Check if API is ready
+        -- Output: boolean (ready or not)
+        IsReady = function()
+            return MagicConch ~= nil and 
+                   gameState ~= nil and 
+                   getTiming ~= nil and 
+                   MagicConch_Lang ~= nil and 
+                   MagicConch_Config ~= nil
+        end,
+        
+        -- Get callback information
+        -- Output: table { count, callbacks }
+        GetCallbackInfo = function()
+            return MagicConch_API.GetCallbackInfo()
+        end,
+        
+        -- Get last result
+        -- Output: table or nil
+        GetLastResult = function()
+            return MagicConch_API.GetLastResult()
+        end,
+        
+        -- Get current state
+        -- Output: string (state name)
+        GetState = function()
+            return gameState.state
+        end,
+        
         -- Version information
         Version = MagicConch_Config and MagicConch_Config.VERSION,
         
         -- Config information (read-only)
-        Config = MagicConch.Config
+        Config = MagicConch and MagicConch.Config
     }
 end
 

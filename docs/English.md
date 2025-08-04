@@ -1,19 +1,29 @@
 # MagicConch Language and Translation Add/Modify Guide
 
-## 📑 Table of Contents
+## Table of Contents
 
-- [MagicConch Language and Translation Add/Modify Guide](#magicconch-language-and-translation-addmodify-guide)
-  - [1. Add/Modify Languages (Code, Name, Font, etc.)](#1-addmodify-languages-code-name-font-etc)
-  - [2. Add/Modify Translation Strings](#2-addmodify-translation-strings)
-  - [3. Notes for Adding/Modifying Strings](#3-notes-for-addingmodifying-strings)
-  - [4. Example: Adding a New Message](#4-example-adding-a-new-message)
-  - [Summary](#summary)
-- [Magic Conch API Guide](#magic-conch-api-guide)
-  - [Overview](#overview)
-  - [API Access Method](#api-access-method)
-  - [API Functions](#api-functions)
-  - [Usage Tips](#usage-tips)
-  - [Precautions](#precautions)
+### Language and Translation Management
+- [1. Add/Modify Languages (Code, Name, Font, etc.)](#1-addmodify-languages-code-name-font-etc)
+- [2. Add/Modify Translation Strings](#2-addmodify-translation-strings)
+- [3. Notes for Adding/Modifying Strings](#3-notes-for-addingmodifying-strings)
+- [4. Example: Adding a New Message](#4-example-adding-a-new-message)
+- [Summary](#summary)
+
+### Magic Conch API Guide
+- [Overview](#overview)
+- [Detailed Implementation Guide](#detailed-implementation-guide)
+  - [Step 1: Basic Structure Setup](#step-1-basic-structure-setup)
+  - [Step 2: API Readiness Verification Function](#step-2-api-readiness-verification-function)
+  - [Step 3: Callback Registration Function](#step-3-callback-registration-function)
+  - [Step 4: Periodic Check System](#step-4-periodic-check-system)
+  - [Step 5: Callback Registration and Backup System](#step-5-callback-registration-and-backup-system)
+  - [Callback Processing Function Implementation](#callback-processing-function-implementation)
+- [Quick Reference (Simple Usage)](#quick-reference-simple-usage)
+- [result Table Structure](#result-table-structure)
+- [API Function Reference](#api-function-reference)
+- [Important Precautions](#important-precautions)
+- [Magic Conch Operation Method](#magic-conch-operation-method)
+- [ToDo](#todo)
 
 ---
 
@@ -104,224 +114,280 @@ JP = {
 
 ## Magic Conch API Guide
 
-### 📋 Overview
+### Overview
 
 Magic Conch provides an API that allows other mods to utilize Magic Conch functionality. Other mods can execute Magic Conch or receive and process results.
 
-### 🔧 API Access Method
+### Detailed Implementation Guide
 
+#### **Step 1: Basic Structure Setup**
+
+**1.1 Mod Registration and Variable Initialization**
 ```lua
--- Check if Magic Conch API is available
-if MagicConch and MagicConch.API then
-    -- API is available
-    local version = MagicConch.API.Version
-    local config = MagicConch.API.Config
-else
-    -- Magic Conch is not loaded
-    Isaac.ConsoleOutput("Magic Conch API not found")
+local YourMod = RegisterMod("Your Mod Name", 1)
+
+-- API-related control variables
+local apiCheckTimer = 0        -- Timer counter (frame units)
+local maxRetries = 60          -- Maximum retry count (10 seconds = 60 * 1/6 seconds)
+local retryCount = 0           -- Current retry count
+YourMod.apiRegistered = false  -- API registration completion flag
+```
+
+**1.2 Check Interval Settings**
+- `apiCheckTimer >= 10`: Check every 10 frames (about 1/6 second)
+- `maxRetries = 60`: Total 10 seconds of attempts (60 times * 1/6 second)
+- Game usually runs at 60FPS, so 10 frames = about 0.167 seconds
+
+#### **Step 2: API Readiness Verification Function**
+
+**2.1 Complete Readiness Check**
+```lua
+local function isMagicConchAPIReady()
+    return MagicConch and                              -- 1. MagicConch mod exists
+           MagicConch.API and                          -- 2. API object exists
+           type(MagicConch.API) == "table" and         -- 3. API is table type
+           MagicConch.API.RegisterCallback and         -- 4. RegisterCallback function exists
+           type(MagicConch.API.RegisterCallback) == "function" and  -- 5. Function type check
+           MagicConch.API.IsReady and                  -- 6. IsReady function exists
+           type(MagicConch.API.IsReady) == "function" and          -- 7. Function type check
+           MagicConch.API.IsReady()                    -- 8. Actual readiness check
 end
 ```
 
-### 📚 API Functions
+**2.2 Verification Step Description**
+1. **MagicConch**: Check basic mod object loading
+2. **MagicConch.API**: Check API interface creation
+3. **type() checks**: Verify objects are correct types
+4. **Function existence check**: Verify required functions are defined
+5. **IsReady() call**: Check Magic Conch internal initialization completion
 
-#### 1. RegisterCallback(callback, modName)
+#### **Step 3: Callback Registration Function**
 
-Register a callback to receive Magic Conch results from other mods.
-
-**Input:**
-- `callback` (function): Function to receive the result
-- `modName` (string, optional): Mod name
-
-**Output:**
-- `boolean`: Success or failure
-
-**Callback Result Structure:**
-The `result` table received by the callback function contains the following information:
-- `text` (string): The text output by Magic Conch (e.g., "Yes.", "No.")
-- `type` (string): Result type
-  - `"positive"`: Positive result (Isaac happy face + angel sound)
-  - `"negative"`: Negative result (Isaac angry face + screen shake + item removal in Resolute Mode)
-  - `"neutral"`: Neutral result (Isaac "hmm..." sound)
-- `timestamp` (number): The game frame number when the result was generated
-- `displayStyle` (string): Display style (`"Fortune"` or `"Item"`)
-
-**Result structure received by callback function:**
+**3.1 Registration Function Structure**
 ```lua
-{
-    text = "Magic Conch's answer",
-    type = "positive/negative/neutral",
-    timestamp = 12345,  -- Game frame count
-    displayStyle = 0    -- 0: Fortune Machine Style, 1: Item-like Style
-}
-```
-
-**Example:**
-```lua
-local function handleResult(result)
-    Isaac.ConsoleOutput("Magic Conch Result: " .. result.text)
-    Isaac.ConsoleOutput("Type: " .. result.type)
-    Isaac.ConsoleOutput("Time: " .. result.timestamp)
-    Isaac.ConsoleOutput("Display Style: " .. result.displayStyle)
-end
-
--- Register callback
-local success = MagicConch.API.RegisterCallback(handleResult, "My Mod")
-if success then
-    Isaac.ConsoleOutput("Callback registered successfully!")
-end
-```
-
-#### 2. TriggerMagicConch(modName)
-
-Execute Magic Conch.
-
-**Input:**
-- `modName` (string, optional): Name of the calling mod
-
-**Output:**
-```lua
-{
-    success = true/false,
-    reason = "Execution result message",
-    estimatedTime = 150, -- Frames remaining until completion
-    pendingResult = {    -- Only when success is true
-        text = "Answer to be displayed soon",
-        type = "positive/negative/neutral",
-        willDisplayIn = 90 -- Frames remaining until display
-    }
-}
-```
-
-**Example:**
-```lua
-local result = MagicConch.API.TriggerMagicConch("My Mod")
-if result.success then
-    Isaac.ConsoleOutput("Magic Conch execution successful!")
-    Isaac.ConsoleOutput("Answer: " .. result.pendingResult.text)
-    Isaac.ConsoleOutput("Complete in " .. math.floor(result.estimatedTime / 30) .. " seconds")
-else
-    Isaac.ConsoleOutput("Execution failed: " .. result.reason)
-    if result.estimatedTime > 0 then
-        Isaac.ConsoleOutput("Retry in " .. math.floor(result.estimatedTime / 30) .. " seconds")
+local function registerMagicConchAPI()
+    Isaac.ConsoleOutput("Registering Magic Conch API callback...")
+    
+    local success = MagicConch.API.RegisterCallback(handleMagicConchResult, "Your Mod Name")
+    if success then
+        Isaac.ConsoleOutput("Magic Conch API callback registration successful!")
+    else
+        Isaac.ConsoleOutput("Magic Conch API callback registration failed!")
     end
 end
 ```
 
-#### 3. Version (Property)
+**3.2 Callback Function Requirements**
+- **Function signature**: `function(result)`
+- **result parameter**: Magic Conch result table
+- **modName**: Unique mod name (prevent duplicates)
 
-Returns Magic Conch's version information.
+#### **Step 4: Periodic Check System**
 
-**Type:** `string`
-
-**Example:**
+**4.1 Timer-based Check Logic**
 ```lua
-Isaac.ConsoleOutput("Magic Conch Version: " .. MagicConch.API.Version)
-```
-
-#### 4. Config (Property)
-
-Returns Magic Conch's current configuration. (Read-only)
-
-**Type:** `table`
-
-**Example:**
-```lua
-local config = MagicConch.API.Config
-if config then
-    Isaac.ConsoleOutput("Enabled: " .. tostring(config.enabled))
-    Isaac.ConsoleOutput("Language: " .. config.language)
-    Isaac.ConsoleOutput("Display Style: " .. config.displayStyle)
-    Isaac.ConsoleOutput("Resolute Mode: " .. tostring(config.resoluteMode))
-end
-```
-
-### 💡 Usage Tips
-
-#### Register API on Game Start
-```lua
-YourMod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function()
-    if MagicConch and MagicConch.API then
-        MagicConch.API.RegisterCallback(yourCallbackFunction, "Your Mod Name")
-        Isaac.ConsoleOutput("Magic Conch API connected!")
-    end
-end)
-```
-
-#### Auto-execute in Specific Situations
-```lua
--- Auto-execute Magic Conch when boss is killed
-YourMod:AddCallback(ModCallbacks.MC_POST_ENTITY_KILL, function(_, entity)
-    if entity:IsBoss() and MagicConch and MagicConch.API then
-        local result = MagicConch.API.TriggerMagicConch("Your Mod (Boss Kill)")
-        if result.success then
-            Isaac.ConsoleOutput("Boss defeated! Magic Conch auto-executed")
+local function apiRegistrationCallback()
+    -- Check registration completion flag
+    if not YourMod.apiRegistered then
+        apiCheckTimer = apiCheckTimer + 1
+        
+        -- Execute every 10 frames (about 1/6 second)
+        if apiCheckTimer >= 10 then
+            apiCheckTimer = 0  -- Reset timer
+            retryCount = retryCount + 1
+            
+            Isaac.ConsoleOutput("Checking API readiness... (Attempt " .. retryCount .. "/" .. maxRetries .. ")")
+            
+            if isMagicConchAPIReady() then
+                -- Success: Register API and cleanup
+                Isaac.ConsoleOutput("=== Magic Conch API Ready! ===")
+                registerMagicConchAPI()
+                YourMod.apiRegistered = true
+                
+                -- Important: Remove callback (performance optimization)
+                YourMod:RemoveCallback(ModCallbacks.MC_POST_UPDATE, apiRegistrationCallback)
+                
+            elseif retryCount >= maxRetries then
+                -- Failure: Give up and cleanup
+                Isaac.ConsoleOutput("=== Warning: Magic Conch API initialization failed ===")
+                YourMod.apiRegistered = true  -- Stop further attempts
+                
+                -- Remove callback (prevent infinite loop)
+                YourMod:RemoveCallback(ModCallbacks.MC_POST_UPDATE, apiRegistrationCallback)
+            end
         end
     end
-end)
-```
-
-#### Implement Type-specific Special Effects
-```lua
-local function handleMagicConchResult(result)
-    local player = Isaac.GetPlayer(0)
-    
-    if result.type == "positive" then
-        -- Positive result: heal health
-        player:AddHearts(2)
-        Isaac.ConsoleOutput("✨ Good result! Health restored")
-    elseif result.type == "negative" then
-        -- Negative result: add curse
-        local game = Game()
-        game:GetLevel():AddCurse(LevelCurse.CURSE_OF_DARKNESS, false)
-        Isaac.ConsoleOutput("💀 Bad result! Curse of Darkness")
-    else
-        -- Neutral result: no special effect
-        Isaac.ConsoleOutput("😐 Neutral result...")
-    end
 end
 ```
 
-#### Spam Prevention Handling
+**4.2 Timer Calculation Method**
+- **Isaac Game**: Basic 60FPS
+- **10 frames**: About 0.167 seconds (1/6 second)
+- **60 attempts**: Total 10 seconds waiting
+- **Reasonable interval**: Minimize CPU load
+
+#### **Step 5: Callback Registration and Backup System**
+
+**5.1 Main Registration System**
 ```lua
-local lastTriggerTime = 0
-local function triggerWithCooldown()
-    local currentTime = Game():GetFrameCount()
-    if currentTime - lastTriggerTime < 60 then -- 2 second cooldown
-        Isaac.ConsoleOutput("Too frequent execution, please try again later")
+-- Start periodic checking
+YourMod:AddCallback(ModCallbacks.MC_POST_UPDATE, apiRegistrationCallback)
+```
+
+**5.2 Backup Registration System (New Level)**
+```lua
+YourMod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, function()
+    if isMagicConchAPIReady() and not YourMod.apiRegistered then
+        Isaac.ConsoleOutput("Attempting API registration on new level...")
+        registerMagicConchAPI()
+        YourMod.apiRegistered = true
+    end
+end)
+```
+
+**5.3 Backup System Necessity**
+- **Game restart**: Provide additional opportunities
+- **Level transition**: Re-check API status
+- **Safety net** role
+
+#### **Callback Processing Function Implementation**
+
+**Callback Function Structure**
+```lua
+local function handleMagicConchResult(result)
+    -- Result verification
+    if not result or not result.text or not result.type then
+        Isaac.ConsoleOutput("Error: Invalid Magic Conch result")
         return
     end
     
-    local result = MagicConch.API.TriggerMagicConch("Your Mod")
-    if result.success then
-        lastTriggerTime = currentTime
+    Isaac.ConsoleOutput("Magic Conch Result: " .. result.text .. " (Type: " .. result.type .. ")")
+    
+    -- Type-based branching
+    if result.type == "positive" then
+        handlePositiveResult(result)
+    elseif result.type == "negative" then
+        handleNegativeResult(result)
+    else -- "neutral"
+        handleNeutralResult(result)
     end
 end
 ```
 
-### ⚠️ Precautions
+**Callback Registration and Removal**
+```lua
+-- Register callback
+MagicConch.API.RegisterCallback(handleMagicConchResult, "YourModName")
 
-1. **Always check for API existence before use**
-   - Verify that both `MagicConch` and `MagicConch.API` exist
+-- Remove callback (when needed)
+MagicConch.API.UnregisterCallback("YourModName")
+```
 
-2. **Avoid abusing TriggerMagicConch**
-   - Built-in spam prevention exists, but implement appropriate cooldowns
-   - Too frequent calls can harm user experience
+**Safe Callback with Error Handling**
+```lua
+local function safeMagicConchCallback(result)
+    local success, err = pcall(function()
+        if not result or not result.text or not result.type then
+            return
+        end
+        
+        -- Actual processing logic
+        handleMagicConchResult(result)
+    end)
+    
+    if not success then
+        Isaac.ConsoleOutput("Magic Conch callback error: " .. tostring(err))
+    end
+end
+```
 
-3. **Config is read-only**
-   - Do not directly modify the Config object
-   - Settings can only be changed through MCM
+---
 
-4. **Consider game state**
-   - `TriggerMagicConch` may fail when Magic Conch is already running
-   - New input is immediately available during `displaying` state
+### Quick Reference (Simple Usage)
 
-### 🎮 Magic Conch Operation
+For cases where Magic Conch is already loaded, here's a simple method:
 
-1. **🐚 Use**: Isaac lifts up the Magic Conch (uses MagicConch.png image)
-2. **🎰 Start**: Slot machine sound + screen shake
-3. **⏳ Wait**: Brief tension building
-4. **📝 Display**: Answer text display + type-based effects
-5. **😴 Cooldown**: Configurable cooldown time
+```lua
+if MagicConch and MagicConch.API and MagicConch.API.IsReady() then
+    MagicConch.API.RegisterCallback(function(result)
+        Isaac.ConsoleOutput("Magic Conch: " .. result.text .. " (" .. result.type .. ")")
+    end, "MyMod")
+end
+```
+
+**Note**: Use this method only when loading order is guaranteed. In most cases, it's safer to follow the **Detailed Implementation Guide** above.
+
+### result Table Structure
+
+Structure of the result table received in callback functions:
+
+```lua
+{
+    text = "Magic Conch's answer",        -- string: Actual answer text
+    type = "positive/negative/neutral",   -- string: Result type
+    timestamp = 12345,                    -- number: Game frame number
+    displayStyle = 1,                     -- number: Display style (0: Fortune, 1: Item)
+    source = "Magic Conch",               -- string: Always "Magic Conch"
+    version = "1.0"                       -- string: Magic Conch version
+}
+```
+
+**Type-based Processing Guide:**
+- **positive**: Positive effects (item upgrades, health recovery, etc.)
+- **negative**: Negative effects (curse addition, item removal, etc.)
+- **neutral**: Neutral effects (information display, logging, etc.)
+
+### API Function Reference
+
+#### **Callback-related API Functions**
+
+| Function | Purpose | Input | Return Value |
+|----------|---------|-------|--------------|
+| `RegisterCallback(callback, modName)` | Register callback | function, string | boolean |
+| `UnregisterCallback(modName)` | Remove callback | string | boolean |
+| `TriggerMagicConch(modName)` | Execute Magic Conch | string | table |
+| `IsReady()` | Check API readiness | - | boolean |
+| `GetLastResult()` | Get last result | - | table/nil |
+| `GetCallbackInfo()` | Get registered callback info | - | table |
+
+### Important Precautions
+
+#### **Callback Processing Requirements**
+
+1. **Always perform result verification**
+   ```lua
+   if not result or not result.text or not result.type then
+       return  -- Ignore invalid results
+   end
+   ```
+
+2. **Protect callbacks with pcall**
+   ```lua
+   local success, err = pcall(handleMagicConchResult, result)
+   if not success then
+       Isaac.ConsoleOutput("Callback error: " .. tostring(err))
+   end
+   ```
+
+3. **Manage callback registration/removal**
+   - On mod load: Call `RegisterCallback`
+   - On mod unload: Call `UnregisterCallback`
+   - Duplicate registration with same modName will overwrite
+
+#### **Things to Avoid**
+
+- Do not directly modify result table (read-only)
+- Do not register new callbacks inside callback functions
+- Do not ignore errors when they occur in callback functions
+- Do not call TriggerMagicConch without checking Magic Conch status
+
+### Magic Conch Operation Method
+
+1. **Use**: Isaac lifts up the Magic Conch (uses MagicConch.png image)
+2. **Start**: Slot machine sound + screen shake
+3. **Wait**: Brief tension building
+4. **Display**: Answer text display + type-based effects
+5. **Cooldown**: Configurable cooldown time
 
 **Type-based Effects:**
 - **Positive**: Angel sound + Isaac happy face
@@ -330,6 +396,6 @@ end
 
 ---
 
-# ToDo
+## ToDo
 
 - How to make fonts

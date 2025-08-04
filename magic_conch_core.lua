@@ -167,6 +167,9 @@ local stateHandlers = {
                 gameState.lastResultTime = result.timestamp
                 
                 -- Execute registered callbacks
+                if MagicConch.Config.debugMode then
+                    MagicConch.printDebug("About to execute callbacks with result: " .. result.text .. " (" .. result.type .. ")")
+                end
                 MagicConch_API.ExecuteCallbacks(result)
                 
                 -- Type-based effects
@@ -280,15 +283,32 @@ function MagicConch:ReloadFont()
 end
 
 function MagicConch:OnGameStart(isSave)
+    MagicConch.print("Magic Conch 초기화 시작...")
+    
     MagicConch_Config.Load(MagicConch)
     MagicConch_MCM.Setup(MagicConch, MagicConch_Lang, MagicConch_Config)
     
     -- Initialize API module
+    MagicConch.print("API 모듈 초기화 중...")
     MagicConch_API.Init(MagicConch, gameState, getTiming, MagicConch_Lang, MagicConch_Config)
     
     loadCurrentLanguageFont(MagicConch.Config)
     resetGameState()
-    MagicConch.print("Magic Conch v" .. MagicConch_Config.VERSION .. " loaded!")
+    
+    -- API 인터페이스 즉시 생성
+    if not MagicConch.API then
+        MagicConch.API = MagicConch_API.CreateInterface()
+        MagicConch.print("Magic Conch API 인터페이스가 생성되었습니다!")
+        
+        -- API 준비 상태 확인
+        if MagicConch.API.IsReady() then
+            MagicConch.print("Magic Conch API가 완전히 준비되었습니다!")
+        else
+            MagicConch.printError("Magic Conch API 준비 과정에서 문제가 발생했습니다!")
+        end
+    end
+    
+    MagicConch.print("Magic Conch v" .. MagicConch_Config.VERSION .. " 로드 완료!")
 end
 
 function MagicConch:OnNewRoom()
@@ -310,21 +330,7 @@ MagicConch:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, MagicConch.OnGameExit)
 -- API interface will be created after initialization
 MagicConch.API = nil
 
--- Create API interface after game start
-local function createAPIInterface()
-    MagicConch.API = MagicConch_API.CreateInterface()
-end
-
--- Initialize API interface on first game start
+-- API initialization flag to prevent duplicate initialization
 local apiInitialized = false
-local originalOnGameStart = MagicConch.OnGameStart
-function MagicConch:OnGameStart(isSave)
-    originalOnGameStart(self, isSave)
-    
-    if not apiInitialized then
-        createAPIInterface()
-        apiInitialized = true
-    end
-end
 
 return MagicConch

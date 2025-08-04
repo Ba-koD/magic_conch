@@ -1,19 +1,27 @@
-# MagicConch 언어 및 번역 추가/수정 방법
-
 ## 📑 목차
 
-- [MagicConch 언어 및 번역 추가/수정 방법](#magicconch-언어-및-번역-추가수정-방법)
-  - [1. 언어(코드, 이름, 폰트 등) 추가/수정](#1-언어코드-이름-폰트-등-추가수정)
-  - [2. 번역 문장 추가/수정](#2-번역-문장-추가수정)
-  - [3. 문장 추가/수정 시 주의사항](#3-문장-추가수정-시-주의사항)
-  - [4. 예시: 새로운 문장 추가](#4-예시-새로운-문장-추가)
-  - [요약](#요약)
-- [Magic Conch API 가이드](#magic-conch-api-가이드)
-  - [개요](#개요)
-  - [API 접근 방법](#api-접근-방법)
-  - [API 함수들](#api-함수들)
-  - [사용 팁](#사용-팁)
-  - [주의사항](#주의사항)
+### 언어 및 번역 관리
+- [1. 언어(코드, 이름, 폰트 등) 추가/수정](#1-언어코드-이름-폰트-등-추가수정)
+- [2. 번역 문장 추가/수정](#2-번역-문장-추가수정)
+- [3. 문장 추가/수정 시 주의사항](#3-문장-추가수정-시-주의사항)
+- [4. 예시: 새로운 문장 추가](#4-예시-새로운-문장-추가)
+- [요약](#요약)
+
+### Magic Conch API 가이드
+- [개요](#개요)
+- [세부 구현 가이드](#세부-구현-가이드)
+  - [1단계: 기본 구조 설정](#1단계-기본-구조-설정)
+  - [2단계: API 준비 상태 검증 함수 구현](#2단계-api-준비-상태-검증-함수-구현)
+  - [3단계: 콜백 등록 함수 구현](#3단계-콜백-등록-함수-구현)
+  - [4단계: 주기적 확인 시스템 구현](#4단계-주기적-확인-시스템-구현)
+  - [5단계: 콜백 등록 및 백업 시스템](#5단계-콜백-등록-및-백업-시스템)
+  - [콜백 처리 함수 구현](#콜백-처리-함수-구현)
+- [빠른 참조 (Simple Usage)](#빠른-참조-simple-usage)
+- [result 테이블 구조](#result-테이블-구조)
+- [API 함수 참조](#api-함수-참조)
+- [중요 주의사항](#중요-주의사항)
+- [Magic Conch 동작 방식](#magic-conch-동작-방식)
+- [추가예정](#추가예정)
 
 ---
 
@@ -104,224 +112,282 @@ JP = {
 
 ## Magic Conch API 가이드
 
-### 📋 개요
+### 개요
 
 Magic Conch는 다른 모드들이 Magic Conch의 기능을 활용할 수 있도록 API를 제공합니다. 다른 모드에서 Magic Conch를 실행하거나, 결과를 받아서 처리할 수 있습니다.
 
-### 🔧 API 접근 방법
+### 세부 구현 가이드
 
+#### **1단계: 기본 구조 설정**
+
+**1.1 모드 등록 및 변수 초기화**
 ```lua
--- Magic Conch API 사용 가능 여부 확인
-if MagicConch and MagicConch.API then
-    -- API 사용 가능
-    local version = MagicConch.API.Version
-    local config = MagicConch.API.Config
-else
-    -- Magic Conch가 로드되지 않음
-    Isaac.ConsoleOutput("Magic Conch API를 찾을 수 없습니다")
+local YourMod = RegisterMod("Your Mod Name", 1)
+
+-- API 관련 제어 변수들
+local apiCheckTimer = 0        -- 타이머 카운터 (프레임 단위)
+local maxRetries = 60          -- 최대 재시도 횟수 (10초 = 60 * 1/6초)
+local retryCount = 0           -- 현재 재시도 횟수
+YourMod.apiRegistered = false  -- API 등록 완료 플래그
+```
+
+**1.2 체크 주기 설정**
+- `apiCheckTimer >= 10`: 10프레임마다 확인 (약 1/6초)
+- `maxRetries = 60`: 총 10초간 시도 (60회 * 1/6초)
+- 게임은 보통 60FPS이므로 10프레임 = 약 0.167초
+
+#### **2단계: API 준비 상태 검증 함수 구현**
+
+**2.1 완전한 준비 상태 확인**
+```lua
+local function isMagicConchAPIReady()
+    return MagicConch and                              -- 1. MagicConch 모드 존재
+           MagicConch.API and                          -- 2. API 객체 존재
+           type(MagicConch.API) == "table" and         -- 3. API가 테이블 타입
+           MagicConch.API.RegisterCallback and         -- 4. RegisterCallback 함수 존재
+           type(MagicConch.API.RegisterCallback) == "function" and  -- 5. 함수 타입 확인
+           MagicConch.API.IsReady and                  -- 6. IsReady 함수 존재
+           type(MagicConch.API.IsReady) == "function" and          -- 7. 함수 타입 확인
+           MagicConch.API.IsReady()                    -- 8. 실제 준비 상태 확인
 end
 ```
 
-### 📚 API 함수들
+**2.2 검증 단계별 설명**
+1. **MagicConch**: 기본 모드 객체 로딩 확인
+2. **MagicConch.API**: API 인터페이스 생성 확인
+3. **type() 검사**: 객체가 올바른 타입인지 확인
+4. **함수 존재 확인**: 필요한 함수들이 정의되었는지 확인
+5. **IsReady() 호출**: Magic Conch 내부 초기화 완료 확인
 
-#### 1. RegisterCallback(callback, modName)
+#### **3단계: 콜백 등록 함수 구현**
 
-다른 모드가 Magic Conch의 결과를 받을 수 있도록 콜백을 등록합니다.
-
-**입력:**
-- `callback` (function): 결과를 받을 함수
-- `modName` (string, 선택사항): 모드 이름
-
-**출력:**
-- `boolean`: 성공 여부
-
-**콜백 결과 구조:**
-콜백 함수가 받는 `result` 테이블에는 다음 정보가 포함됩니다:
-- `text` (string): Magic Conch가 출력한 텍스트 (예: "좋아.", "안 돼.")
-- `type` (string): 결과 타입
-  - `"positive"`: 긍정적 결과 (Isaac 행복 표정 + 천사 소리)
-  - `"negative"`: 부정적 결과 (Isaac 화난 표정 + 화면 흔들림 + Resolute Mode 시 아이템 제거)
-  - `"neutral"`: 중립적 결과 (Isaac "흠..." 소리)
-- `timestamp` (number): 결과가 생성된 게임 프레임 번호
-- `displayStyle` (string): 표시 스타일 (`"Fortune"` 또는 `"Item"`)
-
-**콜백 함수가 받는 result 구조:**
+**3.1 등록 함수 구조**
 ```lua
-{
-    text = "Magic Conch의 답변",
-    type = "positive/negative/neutral",
-    timestamp = 12345,  -- 게임 프레임 카운트
-    displayStyle = 0    -- 0: Fortune Machine Style, 1: Item-like Style
-}
-```
-
-**예시:**
-```lua
-local function handleResult(result)
-    Isaac.ConsoleOutput("Magic Conch 결과: " .. result.text)
-    Isaac.ConsoleOutput("타입: " .. result.type)
-    Isaac.ConsoleOutput("시간: " .. result.timestamp)
-    Isaac.ConsoleOutput("표시 스타일: " .. result.displayStyle)
-end
-
--- 콜백 등록
-local success = MagicConch.API.RegisterCallback(handleResult, "내 모드")
-if success then
-    Isaac.ConsoleOutput("콜백 등록 성공!")
-end
-```
-
-#### 2. TriggerMagicConch(modName)
-
-Magic Conch를 실행합니다.
-
-**입력:**
-- `modName` (string, 선택사항): 호출한 모드 이름
-
-**출력:**
-```lua
-{
-    success = true/false,
-    reason = "실행 결과 메시지",
-    estimatedTime = 150, -- 완료까지 남은 프레임 수
-    pendingResult = {    -- success가 true일 때만
-        text = "곧 표시될 답변",
-        type = "positive/negative/neutral",
-        willDisplayIn = 90 -- 표시까지 남은 프레임 수
-    }
-}
-```
-
-**예시:**
-```lua
-local result = MagicConch.API.TriggerMagicConch("내 모드")
-if result.success then
-    Isaac.ConsoleOutput("Magic Conch 실행 성공!")
-    Isaac.ConsoleOutput("답변: " .. result.pendingResult.text)
-    Isaac.ConsoleOutput(math.floor(result.estimatedTime / 30) .. "초 후 완료")
-else
-    Isaac.ConsoleOutput("실행 실패: " .. result.reason)
-    if result.estimatedTime > 0 then
-        Isaac.ConsoleOutput(math.floor(result.estimatedTime / 30) .. "초 후 재시도")
+local function registerMagicConchAPI()
+    Isaac.ConsoleOutput("Magic Conch API 콜백 등록 중...")
+    
+    local success = MagicConch.API.RegisterCallback(handleMagicConchResult, "Your Mod Name")
+    if success then
+        Isaac.ConsoleOutput("Magic Conch API 콜백 등록 성공!")
+    else
+        Isaac.ConsoleOutput("Magic Conch API 콜백 등록 실패!")
     end
 end
 ```
 
-#### 3. Version (속성)
+**3.2 콜백 함수 요구사항**
+- **함수 시그니처**: `function(result)`
+- **result 매개변수**: Magic Conch 결과 테이블
+- **modName**: 고유한 모드 이름 (중복 방지)
 
-Magic Conch의 버전 정보를 반환합니다.
+#### **4단계: 주기적 확인 시스템 구현**
 
-**타입:** `string`
-
-**예시:**
+**4.1 타이머 기반 확인 로직**
 ```lua
-Isaac.ConsoleOutput("Magic Conch 버전: " .. MagicConch.API.Version)
-```
-
-#### 4. Config (속성)
-
-Magic Conch의 현재 설정을 반환합니다. (읽기 전용)
-
-**타입:** `table`
-
-**예시:**
-```lua
-local config = MagicConch.API.Config
-if config then
-    Isaac.ConsoleOutput("활성화: " .. tostring(config.enabled))
-    Isaac.ConsoleOutput("언어: " .. config.language)
-    Isaac.ConsoleOutput("표시 스타일: " .. config.displayStyle)
-    Isaac.ConsoleOutput("Resolute Mode: " .. tostring(config.resoluteMode))
-end
-```
-
-### 💡 사용 팁
-
-#### 게임 시작 시 API 등록
-```lua
-YourMod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function()
-    if MagicConch and MagicConch.API then
-        MagicConch.API.RegisterCallback(yourCallbackFunction, "Your Mod Name")
-        Isaac.ConsoleOutput("Magic Conch API 연결 완료!")
-    end
-end)
-```
-
-#### 특정 상황에서 자동 실행
-```lua
--- 보스 처치 시 Magic Conch 자동 실행
-YourMod:AddCallback(ModCallbacks.MC_POST_ENTITY_KILL, function(_, entity)
-    if entity:IsBoss() and MagicConch and MagicConch.API then
-        local result = MagicConch.API.TriggerMagicConch("Your Mod (Boss Kill)")
-        if result.success then
-            Isaac.ConsoleOutput("보스 처치! Magic Conch 자동 실행")
+local function apiRegistrationCallback()
+    -- 등록 완료 플래그 확인
+    if not YourMod.apiRegistered then
+        apiCheckTimer = apiCheckTimer + 1
+        
+        -- 10프레임(약 1/6초)마다 실행
+        if apiCheckTimer >= 10 then
+            apiCheckTimer = 0  -- 타이머 리셋
+            retryCount = retryCount + 1
+            
+            Isaac.ConsoleOutput("API 준비 상태 확인 중... (시도 " .. retryCount .. "/" .. maxRetries .. ")")
+            
+            if isMagicConchAPIReady() then
+                -- 성공: API 등록 및 정리
+                Isaac.ConsoleOutput("=== Magic Conch API 준비됨! ===")
+                registerMagicConchAPI()
+                YourMod.apiRegistered = true
+                
+                -- 중요: 콜백 제거 (성능 최적화)
+                YourMod:RemoveCallback(ModCallbacks.MC_POST_UPDATE, apiRegistrationCallback)
+                
+            elseif retryCount >= maxRetries then
+                -- 실패: 포기 및 정리
+                Isaac.ConsoleOutput("=== 경고: Magic Conch API 초기화 실패 ===")
+                YourMod.apiRegistered = true  -- 더 이상 시도하지 않음
+                
+                -- 콜백 제거 (무한 루프 방지)
+                YourMod:RemoveCallback(ModCallbacks.MC_POST_UPDATE, apiRegistrationCallback)
+            end
         end
     end
-end)
-```
-
-#### 타입별 특수 효과 구현
-```lua
-local function handleMagicConchResult(result)
-    local player = Isaac.GetPlayer(0)
-    
-    if result.type == "positive" then
-        -- 긍정적 결과: 체력 회복
-        player:AddHearts(2)
-        Isaac.ConsoleOutput("✨ 좋은 결과! 체력 회복")
-    elseif result.type == "negative" then
-        -- 부정적 결과: 저주 추가
-        local game = Game()
-        game:GetLevel():AddCurse(LevelCurse.CURSE_OF_DARKNESS, false)
-        Isaac.ConsoleOutput("💀 나쁜 결과! 어둠의 저주")
-    else
-        -- 중립적 결과: 특별한 효과 없음
-        Isaac.ConsoleOutput("😐 평범한 결과...")
-    end
 end
 ```
 
-#### 스팸 방지 처리
+**4.2 타이머 계산 방식**
+- **Isaac 게임**: 기본 60FPS
+- **10프레임**: 약 0.167초 (1/6초)
+- **60회 시도**: 총 10초간 대기
+- **적당한 간격**: CPU 부하 최소화
+
+#### **5단계: 콜백 등록 및 백업 시스템**
+
+**5.1 메인 등록 시스템**
 ```lua
-local lastTriggerTime = 0
-local function triggerWithCooldown()
-    local currentTime = Game():GetFrameCount()
-    if currentTime - lastTriggerTime < 60 then -- 2초 쿨다운
-        Isaac.ConsoleOutput("너무 빠른 실행, 잠시 후 다시 시도하세요")
+-- 주기적 확인 시작
+YourMod:AddCallback(ModCallbacks.MC_POST_UPDATE, apiRegistrationCallback)
+```
+
+**5.2 백업 등록 시스템 (새 레벨)**
+```lua
+YourMod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, function()
+    if isMagicConchAPIReady() and not YourMod.apiRegistered then
+        Isaac.ConsoleOutput("새 레벨에서 API 등록 시도...")
+        registerMagicConchAPI()
+        YourMod.apiRegistered = true
+    end
+end)
+```
+
+**5.3 백업 시스템 필요성**
+- **게임 재시작** 시 추가 기회 제공
+- **레벨 전환** 시 API 상태 재확인
+- **안전장치** 역할
+
+#### **콜백 처리 함수 구현**
+
+**콜백 함수 구조**
+```lua
+local function handleMagicConchResult(result)
+    -- 결과 검증
+    if not result or not result.text or not result.type then
+        Isaac.ConsoleOutput("오류: 잘못된 Magic Conch 결과")
         return
     end
     
-    local result = MagicConch.API.TriggerMagicConch("Your Mod")
-    if result.success then
-        lastTriggerTime = currentTime
+    Isaac.ConsoleOutput("Magic Conch 결과: " .. result.text .. " (타입: " .. result.type .. ")")
+    
+    -- 타입별 분기 처리
+    if result.type == "positive" then
+        handlePositiveResult(result)
+    elseif result.type == "negative" then
+        handleNegativeResult(result)
+    else -- "neutral"
+        handleNeutralResult(result)
     end
 end
 ```
 
-### ⚠️ 주의사항
+**콜백 등록 및 해제**
+```lua
+-- 콜백 등록
+MagicConch.API.RegisterCallback(handleMagicConchResult, "YourModName")
 
-1. **API 사용 전 항상 존재 여부 확인**
-   - `MagicConch`와 `MagicConch.API`가 모두 존재하는지 확인하세요
+-- 콜백 해제 (필요시)
+MagicConch.API.UnregisterCallback("YourModName")
+```
 
-2. **TriggerMagicConch 남용 방지**
-   - 내장 스팸 방지 기능이 있지만, 적절한 쿨다운을 구현하세요
-   - 너무 자주 호출하면 사용자 경험에 방해가 될 수 있습니다
+**오류 처리가 포함된 안전한 콜백**
+```lua
+local function safeMagicConchCallback(result)
+    local success, err = pcall(function()
+        if not result or not result.text or not result.type then
+            return
+        end
+        
+        -- 실제 처리 로직
+        handleMagicConchResult(result)
+    end)
+    
+    if not success then
+        Isaac.ConsoleOutput("Magic Conch 콜백 오류: " .. tostring(err))
+    end
+end
+```
 
-3. **Config는 읽기 전용**
-   - Config 객체를 직접 수정하지 마세요
-   - 설정 변경은 MCM을 통해서만 가능합니다
+---
 
-4. **게임 상태 고려**
-   - Magic Conch가 이미 실행 중일 때는 `TriggerMagicConch`가 실패할 수 있습니다
-   - `displaying` 상태에서는 새로운 입력이 즉시 가능합니다
+### 빠른 참조 (Simple Usage)
 
-### 🎮 Magic Conch 동작 방식
+Magic Conch가 이미 로드된 경우에만 사용하는 간단한 방법:
 
-1. **🐚 사용**: Isaac이 Magic Conch를 들어올림 (MagicConch.png 이미지 사용)
-2. **🎰 시작**: 슬롯머신 소리 + 화면 흔들림
-3. **⏳ 대기**: 잠시 긴장감 조성
-4. **📝 표시**: 답변 텍스트 표시 + 타입별 효과
-5. **😴 쿨다운**: 설정 가능한 쿨다운 시간
+```lua
+if MagicConch and MagicConch.API and MagicConch.API.IsReady() then
+    MagicConch.API.RegisterCallback(function(result)
+        Isaac.ConsoleOutput("Magic Conch: " .. result.text .. " (" .. result.type .. ")")
+    end, "MyMod")
+end
+```
+
+**주의**: 이 방법은 로딩 순서가 보장된 경우에만 사용하세요. 대부분의 경우 위의 **세부 구현 가이드**를 따르는 것이 안전합니다.
+
+### result 테이블 구조
+
+콜백 함수에서 받는 result 테이블의 구조:
+
+```lua
+{
+    text = "Magic Conch 답변",        -- string: 실제 답변 텍스트
+    type = "positive/negative/neutral", -- string: 결과 타입
+    timestamp = 12345,                -- number: 게임 프레임 번호
+    displayStyle = 1,                 -- number: 표시 스타일 (0: Fortune, 1: Item)
+    source = "Magic Conch",           -- string: 항상 "Magic Conch"
+    version = "1.0"                   -- string: Magic Conch 버전
+}
+```
+
+**타입별 처리 가이드:**
+- **positive**: 긍정적 효과 (아이템 업그레이드, 체력 회복 등)
+- **negative**: 부정적 효과 (저주 추가, 아이템 제거 등)
+- **neutral**: 중립적 효과 (정보 표시, 로그 등)
+
+### API 함수 참조
+
+#### **콜백 관련 API 함수**
+
+| 함수 | 용도 | 입력 | 반환값 |
+|------|------|------|--------|
+| `RegisterCallback(callback, modName)` | 콜백 등록 | function, string | boolean |
+| `UnregisterCallback(modName)` | 콜백 해제 | string | boolean |
+| `TriggerMagicConch(modName)` | Magic Conch 실행 | string | table |
+| `IsReady()` | API 준비 상태 확인 | - | boolean |
+| `GetLastResult()` | 마지막 결과 조회 | - | table/nil |
+| `GetCallbackInfo()` | 등록된 콜백 정보 | - | table |
+
+### 중요 주의사항
+
+#### **콜백 처리 필수 사항**
+
+1. **결과 검증 반드시 수행**
+   ```lua
+   if not result or not result.text or not result.type then
+       return  -- 잘못된 결과 무시
+   end
+   ```
+
+2. **pcall로 콜백 보호**
+   ```lua
+   local success, err = pcall(handleMagicConchResult, result)
+   if not success then
+       Isaac.ConsoleOutput("콜백 오류: " .. tostring(err))
+   end
+   ```
+
+3. **콜백 등록/해제 관리**
+   - 모드 로드 시: `RegisterCallback` 호출
+   - 모드 언로드 시: `UnregisterCallback` 호출
+   - 동일한 modName으로 중복 등록 시 덮어씌워짐
+
+#### **피해야 할 사항**
+
+- result 테이블 직접 수정 (읽기 전용)
+- 콜백 내부에서 새로운 콜백 등록
+- 콜백 함수 내에서 오류 발생 시 무시
+- Magic Conch 상태 확인 없이 TriggerMagicConch 호출
+
+---
+
+### Magic Conch 동작 방식
+
+1. **사용**: Isaac이 Magic Conch를 들어올림 (MagicConch.png 이미지 사용)
+2. **시작**: 슬롯머신 소리 + 화면 흔들림
+3. **대기**: 잠시 긴장감 조성
+4. **표시**: 답변 텍스트 표시 + 타입별 효과
+5. **쿨다운**: 설정 가능한 쿨다운 시간
 
 **타입별 효과:**
 - **Positive**: 천사 소리 + Isaac 행복한 얼굴
