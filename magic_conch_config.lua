@@ -13,6 +13,7 @@ local DefaultConfig = {
     enabled = true,
     resoluteMode = false, -- Resolute Mode  
     language = "Auto",   -- "Auto", "EN", "KR" (edit in magic_conch_lang.lua)
+    forcedReply = "None", -- Forced Reply mode: "None", "Positive", "Neutral", "Negative"
     hotkey = Keyboard.KEY_N,
     displayStyle = 1, -- 0: Fortune Machine Style, 1: Item-like Style
     debugMode = false, -- Debug Mode

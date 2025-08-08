@@ -106,9 +106,26 @@ local function getRandomString(config)
     local langTable = getLanguageTable(config)
     local strings = MagicConchStrings[langTable.code]
 
+    local desiredTypeLower = nil
+    if config and type(config.forcedReply) == "string" then
+        local v = string.lower(config.forcedReply)
+        if v == "positive" or v == "neutral" or v == "negative" then
+            desiredTypeLower = v
+        end
+    end
+
     local pool = {}
     for _, v in pairs(strings) do
-        table.insert(pool, v)
+        if desiredTypeLower == nil or (type(v) == "table" and string.lower(v.type) == desiredTypeLower) then
+            table.insert(pool, v)
+        end
+    end
+
+    if #pool == 0 then
+        -- Fallback to all strings if filtering resulted in empty pool
+        for _, v in pairs(strings) do
+            table.insert(pool, v)
+        end
     end
 
     if #pool == 0 then

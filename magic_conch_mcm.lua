@@ -90,6 +90,33 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         Info = {"Select the output language. (Default: Auto)"},
     })
 
+    -- Forced Reply Mode (0: None, 1: Positive, 2: Neutral, 3: Negative)
+    ModConfigMenu.AddSetting(category, "General", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function()
+            local map = { None = 0, Positive = 1, Neutral = 2, Negative = 3 }
+            local v = mod.Config.forcedReply or "None"
+            return map[v] or 0
+        end,
+        Minimum = 0,
+        Maximum = 3,
+        Display = function()
+            local names = { [0] = "None", [1] = "Positive", [2] = "Neutral", [3] = "Negative" }
+            local idx = 0
+            local map = { None = 0, Positive = 1, Neutral = 2, Negative = 3 }
+            if mod.Config.forcedReply and map[mod.Config.forcedReply] ~= nil then
+                idx = map[mod.Config.forcedReply]
+            end
+            return "Forced Reply: " .. names[idx]
+        end,
+        OnChange = function(n)
+            local names = { [0] = "None", [1] = "Positive", [2] = "Neutral", [3] = "Negative" }
+            mod.Config.forcedReply = names[n] or "None"
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"Force the reply type.", "None: Random as usual", "Positive/Neutral/Negative: Always output selected type."},
+    })
+
     -- Key Binding (including Popup)
     ModConfigMenu.AddSetting(category, "General", {
         Type = ModConfigMenu.OptionType.KEYBIND_KEYBOARD,
