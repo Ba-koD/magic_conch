@@ -36,6 +36,7 @@ function MagicConch_Render:RenderRoomAttempts(mod)
     -- Get usage data
     local currentUsage = 0
     local maxAttempts = mod.Config.attemptsPerRoom or 0
+    local lastType = nil
     
     -- Try to get usage count from mod's gameState if available
     if mod.GetCurrentRoomUsage then
@@ -44,12 +45,32 @@ function MagicConch_Render:RenderRoomAttempts(mod)
             currentUsage = usage or 0
         end
     end
+    if mod.GetCurrentRoomLastType then
+        local ok, t = pcall(function() return mod.GetCurrentRoomLastType() end)
+        if ok then
+            lastType = t
+        end
+    end
+    if mod.GetCurrentRoomLastResponse then
+        local ok, t = pcall(function() return mod.GetCurrentRoomLastResponse() end)
+        if ok then
+            lastResponse = t
+        end
+    end
+    -- No need to query state; we render if last data exists
     
-    -- Hardcoded position as requested
-    local iconX = 430
-    local iconY = 265
+    -- Position from config (fallback to defaults if missing)
+    local iconX = (mod.Config.iconX ~= nil) and mod.Config.iconX
+    local iconY = (mod.Config.iconY ~= nil) and mod.Config.iconY
     local textX = iconX + 10
     local textY = iconY - 17
+    
+    -- Render last result type if available (persist as long as data exists for the room)
+    if lastType and lastType ~= "" then
+        local typeX = iconX
+        local typeY = iconY - 30
+        Isaac.RenderText(tostring(lastType), typeX, typeY, 0.6, 0.6, 0.6, 1)
+    end
     
     -- Render Magic Conch icon (like hit counter mod)
     if spriteLoaded and conchSprite:IsLoaded() then

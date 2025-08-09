@@ -260,6 +260,40 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         Info = {"Fortune Machine: Shows text like fortune teller machine", "Item-like: Shows main text with type subtitle like item pickup"},
     })
 
+    -- Icon Position (X)
+    ModConfigMenu.AddSetting(category, "Display", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function() return mod.Config.iconX end,
+        Minimum = 0,
+        Maximum = 800,
+        ModifyBy = 5,
+        Display = function()
+            return "Icon X: " .. tostring(mod.Config.iconX)
+        end,
+        OnChange = function(n)
+            mod.Config.iconX = n
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"Set the X position of the Magic Conch icon.", "Text position follows icon X automatically."},
+    })
+
+    -- Icon Position (Y)
+    ModConfigMenu.AddSetting(category, "Display", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function() return mod.Config.iconY end,
+        Minimum = 0,
+        Maximum = 450,
+        ModifyBy = 5,
+        Display = function()
+            return "Icon Y: " .. tostring(mod.Config.iconY)
+        end,
+        OnChange = function(n)
+            mod.Config.iconY = n
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"Set the Y position of the Magic Conch icon.", "Text position is offset from the icon and does not need a separate setting."},
+    })
+
     -- Debug Category
     ModConfigMenu.AddSpace(category, "Debug")
     ModConfigMenu.AddText(category, "Debug", "--- Debug Info ---")

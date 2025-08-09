@@ -21,6 +21,10 @@ local DefaultConfig = {
     debugHudY = 40,    -- Debug HUD Y coordinate (default 40)
     attemptsPerRoom = 0, -- Number of attempts allowed per room (0 = unlimited)
     
+    -- UI Positions
+    iconX = 430,       -- Magic Conch icon X position
+    iconY = 265,       -- Magic Conch icon Y position
+    
     -- Timing Settings (in frames, 30fps)
     timing = {
         shake = 15,        -- Screen Shake (0.5s)
@@ -57,24 +61,58 @@ end
 -- Load the config
 ---@param mod table
 ---@return boolean
+-- Internal: load full saved blob
+local function loadAll(mod)
+    if not mod:HasData() then return {} end
+    local ok, data = pcall(function() return json.decode(Isaac.LoadModData(mod)) end)
+    if ok and type(data) == "table" then
+        return data
+    end
+    return {}
+end
+
+-- Load the config
+---@param mod table
+---@return boolean
 function MagicConch_Config.Load(mod)
-    if mod:HasData() then
-        local ok, data = pcall(function() return json.decode(Isaac.LoadModData(mod)) end)
-        if ok and type(data) == "table" then
-            for k, v in pairs(DefaultConfig) do
-                if data[k] ~= nil then
-                    mod.Config[k] = data[k]
-                end
+    local data = loadAll(mod)
+    -- Support both new (nested) and legacy (flat) formats
+    local source = data.config or data
+    if type(source) == "table" then
+        for k, v in pairs(DefaultConfig) do
+            if source[k] ~= nil then
+                mod.Config[k] = source[k]
             end
-            return true
         end
+        return true
     end
     return false
 end
 
 -- Save the config
 function MagicConch_Config.Save(mod)
-    Isaac.SaveModData(mod, json.encode(mod.Config))
+    -- Preserve existing runtime/state while updating config
+    local data = loadAll(mod)
+    data.config = mod.Config
+    data.version = VERSION
+    Isaac.SaveModData(mod, json.encode(data))
+end
+
+-- Runtime (per-run) persistence helpers
+function MagicConch_Config.SaveRuntime(mod, runtime)
+    local data = loadAll(mod)
+    data.config = data.config or mod.Config or {}
+    data.runtime = runtime or {}
+    data.version = VERSION
+    Isaac.SaveModData(mod, json.encode(data))
+end
+
+function MagicConch_Config.LoadRuntime(mod)
+    local data = loadAll(mod)
+    if type(data.runtime) == "table" then
+        return data.runtime
+    end
+    return nil
 end
 
 -- Reset the config

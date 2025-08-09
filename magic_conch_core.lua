@@ -38,7 +38,8 @@ local gameState = {
     lastResultTime = 0,
     callbacks = {},
     -- Room usage tracking
-    roomUsageCount = {}, -- { [roomKey] = usageCount }
+    -- { [roomKey] = { count = number, lastType = string|nil, lastResponse = string|nil } }
+    roomUsageCount = {},
     currentRoomKey = nil
 }
 
@@ -66,7 +67,32 @@ end
 -- Get current room usage count
 local function getCurrentRoomUsage()
     local roomKey = getCurrentRoomKey()
-    return gameState.roomUsageCount[roomKey] or 0
+    local entry = gameState.roomUsageCount[roomKey]
+    if type(entry) == "table" then
+        return entry.count or 0
+    end
+    -- Backward compatibility if a plain number was stored previously
+    return entry or 0
+end
+
+-- Get current room last result type (if any)
+local function getCurrentRoomLastType()
+    local roomKey = getCurrentRoomKey()
+    local entry = gameState.roomUsageCount[roomKey]
+    if type(entry) == "table" then
+        return entry.lastType
+    end
+    return nil
+end
+
+-- Get current room last response text (if any)
+local function getCurrentRoomLastResponse()
+    local roomKey = getCurrentRoomKey()
+    local entry = gameState.roomUsageCount[roomKey]
+    if type(entry) == "table" then
+        return entry.lastResponse
+    end
+    return nil
 end
 
 -- Check if we can use Magic Conch in current room
@@ -83,7 +109,12 @@ end
 -- Increment room usage count
 local function incrementRoomUsage()
     local roomKey = getCurrentRoomKey()
-    gameState.roomUsageCount[roomKey] = (gameState.roomUsageCount[roomKey] or 0) + 1
+    local entry = gameState.roomUsageCount[roomKey]
+    if type(entry) ~= "table" then
+        entry = { count = tonumber(entry) or 0, lastType = nil }
+    end
+    entry.count = (entry.count or 0) + 1
+    gameState.roomUsageCount[roomKey] = entry
     gameState.currentRoomKey = roomKey
 end
 
@@ -220,6 +251,17 @@ local stateHandlers = {
                 }
                 gameState.lastResult = result
                 gameState.lastResultTime = result.timestamp
+                -- Update per-room lastType when result is finalized
+                do
+                    local roomKey = gameState.currentRoomKey or getCurrentRoomKey()
+                    local entry = gameState.roomUsageCount[roomKey]
+                    if type(entry) ~= "table" then
+                        entry = { count = tonumber(entry) or 0, lastType = nil }
+                    end
+                    entry.lastType = result.type
+                    entry.lastResponse = result.text
+                    gameState.roomUsageCount[roomKey] = entry
+                end
                 
                 -- Execute registered callbacks
                 if MagicConch.Config.debugMode then
@@ -370,8 +412,41 @@ function MagicConch:GetCurrentRoomUsage()
     return getCurrentRoomUsage()
 end
 
+-- Public function to get current room last result type
+function MagicConch:GetCurrentRoomLastType()
+    return getCurrentRoomLastType()
+end
+
+-- Public function to expose current state (for render gating)
+function MagicConch:GetState()
+    return gameState.state
+end
+
+-- Public function to get current room last response text
+function MagicConch:GetCurrentRoomLastResponse()
+    return getCurrentRoomLastResponse()
+end
+
 function MagicConch:OnGameStart(isSave)
     MagicConch_Config.Load(MagicConch)
+    -- Load runtime (persist across reloads), but reset for brand new runs
+    local runtime = MagicConch_Config.LoadRuntime(MagicConch)
+    if isSave then
+        -- Continue existing run: restore roomUsageCount and currentRoomKey
+        if type(runtime) == "table" then
+            if type(runtime.roomUsageCount) == "table" then
+                gameState.roomUsageCount = runtime.roomUsageCount
+            end
+            if type(runtime.currentRoomKey) == "string" then
+                gameState.currentRoomKey = runtime.currentRoomKey
+            end
+        end
+    else
+        -- New run: ensure runtime is reset
+        gameState.roomUsageCount = {}
+        gameState.currentRoomKey = nil
+        MagicConch_Config.SaveRuntime(MagicConch, { roomUsageCount = {}, currentRoomKey = nil })
+    end
     MagicConch_MCM.Setup(MagicConch, MagicConch_Lang, MagicConch_Config)
     
     -- Initialize API module
@@ -380,8 +455,10 @@ function MagicConch:OnGameStart(isSave)
     loadCurrentLanguageFont(MagicConch.Config)
     resetGameState()
     
-    -- Reset room usage count on new game start
-    resetRoomUsageCount()
+    -- Only reset on brand new game; for continue, keep loaded runtime
+    if not isSave then
+        resetRoomUsageCount()
+    end
     
     -- Initialize current room key
     gameState.currentRoomKey = getCurrentRoomKey()
@@ -405,12 +482,15 @@ function MagicConch:OnNewRoom()
     resetGameState()
     -- Update current room key when entering new room
     gameState.currentRoomKey = getCurrentRoomKey()
+    -- Persist runtime after room change
+    MagicConch_Config.SaveRuntime(MagicConch, { roomUsageCount = gameState.roomUsageCount, currentRoomKey = gameState.currentRoomKey })
 end
 
 function MagicConch:OnNewLevel()
     -- Reset room usage count when entering new level (floor)
     resetRoomUsageCount()
     resetGameState()
+    MagicConch_Config.SaveRuntime(MagicConch, { roomUsageCount = gameState.roomUsageCount, currentRoomKey = gameState.currentRoomKey })
     
     if MagicConch.Config.debugMode then
         local level = Game():GetLevel()
@@ -422,6 +502,8 @@ end
 
 function MagicConch:OnGameExit()
     MagicConch_Config.Save(MagicConch)
+    -- Save runtime so data persists across reload/continue
+    MagicConch_Config.SaveRuntime(MagicConch, { roomUsageCount = gameState.roomUsageCount, currentRoomKey = gameState.currentRoomKey })
 end
 
 -- Callbacks
