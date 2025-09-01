@@ -17,13 +17,13 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         OnChange = function(b) mod.Config.enabled = b end,
     })
 
-    -- Resolute Mode
+    -- Delete Mode
     ModConfigMenu.AddSetting(category, "General", {
         Type = ModConfigMenu.OptionType.BOOLEAN,
-        CurrentSetting = function() return mod.Config.resoluteMode end,
-        Display = function() return "Resolute Mode: " .. (mod.Config.resoluteMode and "ON" or "OFF") end,
+        CurrentSetting = function() return mod.Config.deleteMode end,
+        Display = function() return "Delete Mode: " .. (mod.Config.deleteMode and "ON" or "OFF") end,
         Info = {"Delete items/pickups when receiving negative answers."},
-        OnChange = function(b) mod.Config.resoluteMode = b end,
+        OnChange = function(b) mod.Config.deleteMode = b end,
     })
 
     -- Attempts per Room

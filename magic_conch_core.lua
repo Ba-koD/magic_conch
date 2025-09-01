@@ -118,7 +118,7 @@ local function incrementRoomUsage()
     gameState.currentRoomKey = roomKey
 end
 
--- Remove all pickups and items in the current room (Resolute Mode)
+-- Remove all pickups and items in the current room (Delete Mode)
 local function removeAllPickupsAndItems()
     local room = Game():GetRoom()
     local removedCount = 0
@@ -283,11 +283,11 @@ local stateHandlers = {
                             MagicConch.printDebug("Negative result: Applied Isaac disgusted effects")
                         end
                         
-                        -- Resolute Mode: Remove pickups and items if enabled
-                        if MagicConch.Config.resoluteMode then
+                        -- Delete Mode: Remove pickups and items if enabled
+                        if MagicConch.Config.deleteMode then
                             local removedCount = removeAllPickupsAndItems()
                             if MagicConch.Config.debugMode then
-                                MagicConch.printDebug("Resolute Mode: Removed " .. removedCount .. " entities")
+                                MagicConch.printDebug("Delete Mode: Removed " .. removedCount .. " entities")
                             end
                         end
                         

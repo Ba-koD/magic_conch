@@ -391,7 +391,7 @@ Structure of the result table received in callback functions:
 
 **Type-based Effects:**
 - **Positive**: Angel sound + Isaac happy face
-- **Negative**: Isaac disgusted face + screen shake + (item removal in Resolute Mode)
+- **Negative**: Isaac disgusted face + screen shake + (item removal in Delete Mode)
 - **Neutral**: "Hmm..." sound
 
 ---

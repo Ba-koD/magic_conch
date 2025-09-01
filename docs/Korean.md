@@ -391,7 +391,7 @@ end
 
 **타입별 효과:**
 - **Positive**: 천사 소리 + Isaac 행복한 얼굴
-- **Negative**: Isaac 찡그린 얼굴 + 화면 흔들림 + (Resolute Mode 시 아이템 삭제)
+- **Negative**: Isaac 찡그린 얼굴 + 화면 흔들림 + (Delete Mode 시 아이템 삭제)
 - **Neutral**: "흠..." 소리
 
 ---

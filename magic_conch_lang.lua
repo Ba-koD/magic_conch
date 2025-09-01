@@ -132,7 +132,22 @@ local function getRandomString(config)
         return nil
     end
 
-    local idx = math.random(1, #pool)
+    -- Deterministic selection based on game seed, room number, and usage count
+    local game = Game()
+    local level = game:GetLevel()
+    local roomIndex = level:GetCurrentRoomIndex()
+    local startSeed = game:GetSeeds():GetStartSeed()
+    
+    -- Get current room usage count for this specific room
+    local usageCount = 0
+    if MagicConch and MagicConch.GetCurrentRoomUsage then
+        usageCount = MagicConch:GetCurrentRoomUsage()
+    end
+    
+    -- Simple hash: just add everything together
+    local hash = startSeed + roomIndex + usageCount
+    local idx = (hash % #pool) + 1
+    
     return pool[idx]
 end
 

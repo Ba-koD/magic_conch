@@ -11,7 +11,7 @@ MagicConch_Config.VERSION = VERSION
 -- Default Config
 local DefaultConfig = {
     enabled = true,
-    resoluteMode = false, -- Resolute Mode  
+    deleteMode = false, -- Delete Mode  
     language = "Auto",   -- "Auto", "EN", "KR" (edit in magic_conch_lang.lua)
     forcedReply = "None", -- Forced Reply mode: "None", "Positive", "Neutral", "Negative"
     hotkey = Keyboard.KEY_N,
