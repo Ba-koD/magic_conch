@@ -25,6 +25,13 @@ local DefaultConfig = {
     iconX = 430,       -- Magic Conch icon X position
     iconY = 265,       -- Magic Conch icon Y position
     
+    -- Probability Weights (Total doesn't need to be 100, but Recommended)
+    chances = {
+        positive = 40,
+        neutral = 20,
+        negative = 40
+    },
+
     -- Timing Settings (in frames, 30fps)
     timing = {
         shake = 15,        -- Screen Shake (0.5s)

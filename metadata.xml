@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metadata>
-    <name>Magic Conch</name>
+    <name>Magic Conch(마법의 소라고둥)</name>
     <directory>!magic_conch</directory>
     <id>3540206030</id>
-    <description>🐚 Magic Conch (마법의 소라고동)
+    <description>🐚 Magic Conch (마법의 소라고둥)
 
-스폰지밥의 마법의 소라고동을 Isaac에서 사용가능한 모드입니다.
+스폰지밥의 마법의 소라고둥을 Isaac에서 사용가능한 모드입니다.
 
 주요 기능:
-소라고동 답변: 단축키(기본 N)를 누르면 긍정적/부정적/중립적 답변 제공
+소라고둥 답변: 단축키(기본 N)를 누르면 긍정적/부정적/중립적 답변 제공
 타입별 효과: 답변에 따라 Isaac의 표정과 소리가 변화
 Delete Mode: 부정적 답변 시 방의 모든 아이템 제거 (선택사항)
 다국어 지원: 한국어/영어 자동 감지 및 전환
@@ -28,7 +28,7 @@ Multi-language: Auto-detects Korean/English and switches accordingly
 Customizable: Adjustable timing, display style, hotkeys and more settings
 
 Compatible with Mod Config Menu</description>
-    <version>1.8</version>
+    <version>1.9</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Tweaks"/>

@@ -66,8 +66,21 @@ local function executeMagicConchSequence(triggerSource)
         
         -- Try the most basic approach - use Isaac's default collectible animation
         local loadSuccess = pcall(function()
-            sprite:Load("gfx/005.100_collectible.anm2", true)
-            sprite:ReplaceSpritesheet(1, "gfx/MagicConch.png")
+            -- Load without loading graphics immediately (false)
+            sprite:Load("gfx/005.100_collectible.anm2", false)
+            
+            -- Determine texture based on Delete Mode
+            local texturePath = "gfx/MagicConch.png"
+            if MagicConch.Config.deleteMode then
+                texturePath = "gfx/MagicConchDel.png"
+            end
+            
+            if MagicConch.Config.debugMode then
+                MagicConch.printDebug("Loading Texture: " .. texturePath)
+            end
+            
+            sprite:ReplaceSpritesheet(1, texturePath)
+            -- Force reload graphics
             sprite:LoadGraphics()
             sprite:SetFrame("Idle", 0)
             sprite:Update()

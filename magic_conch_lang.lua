@@ -114,9 +114,49 @@ local function getRandomString(config)
         end
     end
 
+    -- Deterministic selection based on game seed, room number, and usage count
+    local game = Game()
+    local level = game:GetLevel()
+    local roomIndex = level:GetCurrentRoomIndex()
+    local startSeed = game:GetSeeds():GetStartSeed()
+    
+    -- Get current room usage count for this specific room
+    local usageCount = 0
+    if MagicConch and MagicConch.GetCurrentRoomUsage then
+        usageCount = MagicConch:GetCurrentRoomUsage()
+    end
+    
+    -- Simple hash base
+    local rngVal = startSeed + roomIndex + usageCount
+
+    -- 1. Determine Type (if not forced)
+    if not desiredTypeLower then
+        -- Default chances if missing
+        local chances = (config and config.chances) or { positive = 40, neutral = 20, negative = 40 }
+        local pos = chances.positive
+        local neu = chances.neutral
+        local neg = chances.negative
+        local total = pos + neu + neg
+        
+        if total <= 0 then total = 1 end -- prevent div by zero
+
+        -- Generate random value 0..total-1
+        -- Use a slightly different hash multiplier to separate type selection from string selection
+        local typeRng = (rngVal * 17 + 11) % total
+        
+        if typeRng < pos then
+            desiredTypeLower = "positive"
+        elseif typeRng < (pos + neu) then
+            desiredTypeLower = "neutral"
+        else
+            desiredTypeLower = "negative"
+        end
+    end
+
+    -- 2. Filter strings by Type
     local pool = {}
     for _, v in pairs(strings) do
-        if desiredTypeLower == nil or (type(v) == "table" and string.lower(v.type) == desiredTypeLower) then
+        if type(v) == "table" and string.lower(v.type) == desiredTypeLower then
             table.insert(pool, v)
         end
     end
@@ -131,22 +171,9 @@ local function getRandomString(config)
     if #pool == 0 then
         return nil
     end
-
-    -- Deterministic selection based on game seed, room number, and usage count
-    local game = Game()
-    local level = game:GetLevel()
-    local roomIndex = level:GetCurrentRoomIndex()
-    local startSeed = game:GetSeeds():GetStartSeed()
     
-    -- Get current room usage count for this specific room
-    local usageCount = 0
-    if MagicConch and MagicConch.GetCurrentRoomUsage then
-        usageCount = MagicConch:GetCurrentRoomUsage()
-    end
-    
-    -- Simple hash: just add everything together
-    local hash = startSeed + roomIndex + usageCount
-    local idx = (hash % #pool) + 1
+    -- 3. Select String from Pool
+    local idx = (rngVal % #pool) + 1
     
     return pool[idx]
 end

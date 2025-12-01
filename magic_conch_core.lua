@@ -346,47 +346,75 @@ local stateHandlers = {
     end
 }
 
+-- API initialization flag to prevent duplicate initialization
+local apiInitialized = false
+
+-- Hotkey state tracking for IsButtonPressed logic (QuickPick style)
+local hotkeyState = {
+    wasPressed = false
+}
+
 function MagicConch:OnHotkeyInput()
     if not MagicConch.Config.enabled then return end
-    if not gameState.canInput then return end
-    -- Allow input during idle or displaying states
-    if gameState.state ~= "idle" and gameState.state ~= "displaying" then return end
+    
+    -- Do not process input if game is paused
+    if Game():IsPaused() then return end
+    
+    -- QuickPick Style: Use IsButtonPressed instead of IsButtonTriggered
+    -- This provides more reliable detection but requires state tracking to prevent spam
+    local hotkey = MagicConch.Config.hotkey
+    local isPressed = Input.IsButtonPressed(hotkey, 0)
+    
+    if MagicConch.Config.debugMode and isPressed ~= hotkeyState.wasPressed then
+        MagicConch.printDebug("Hotkey State Changed: " .. tostring(isPressed) .. " (Key: " .. tostring(hotkey) .. ")")
+    end
 
-    local input = Input.IsButtonTriggered(MagicConch.Config.hotkey, 0)
-    if input then
-        -- Check room usage limit only when key is pressed
-        if not canUseMagicConchInRoom() then
-            -- Play error buzz sound when limit is reached
-            local sfxManager = SFXManager()
-            sfxManager:Play(SoundEffect.SOUND_BOSS2INTRO_ERRORBUZZ, 0.5) -- Lower volume for feedback
+    if isPressed then
+        -- Only trigger on the rising edge (when first pressed)
+        if not hotkeyState.wasPressed then
+            hotkeyState.wasPressed = true
             
-            if MagicConch.Config.debugMode then
-                local currentUsage = getCurrentRoomUsage()
-                local maxAttempts = MagicConch.Config.attemptsPerRoom
-                MagicConch.printDebug("Room usage limit reached: " .. currentUsage .. "/" .. maxAttempts .. " - Error sound played")
-            end
-            return
-        end
-        
-        -- Additional safety check: check if state is usable
-        if (gameState.state == "idle" or gameState.state == "displaying") and gameState.canInput then
-            -- Execute Magic Conch sequence first
-            local success = MagicConch_API.ExecuteMagicConchSequence("hotkey")
-            
-            -- Only increment room usage if execution was successful
-            if success then
-                incrementRoomUsage()
+            if not gameState.canInput then return end
+            -- Allow input during idle or displaying states
+            if gameState.state ~= "idle" and gameState.state ~= "displaying" then return end
+
+            -- Check room usage limit only when key is pressed
+            if not canUseMagicConchInRoom() then
+                -- Play error buzz sound when limit is reached
+                local sfxManager = SFXManager()
+                sfxManager:Play(SoundEffect.SOUND_BOSS2INTRO_ERRORBUZZ, 0.5) -- Lower volume for feedback
+                
                 if MagicConch.Config.debugMode then
                     local currentUsage = getCurrentRoomUsage()
                     local maxAttempts = MagicConch.Config.attemptsPerRoom
-                    MagicConch.printDebug("Magic Conch executed successfully, usage: " .. currentUsage .. "/" .. maxAttempts)
+                    MagicConch.printDebug("Room usage limit reached: " .. currentUsage .. "/" .. maxAttempts .. " - Error sound played")
                 end
-            else
-                if MagicConch.Config.debugMode then
-                    MagicConch.printDebug("Magic Conch execution failed, usage count unchanged")
+                return
+            end
+            
+            -- Additional safety check: check if state is usable
+            if (gameState.state == "idle" or gameState.state == "displaying") and gameState.canInput then
+                -- Execute Magic Conch sequence first
+                local success = MagicConch_API.ExecuteMagicConchSequence("hotkey")
+                
+                -- Only increment room usage if execution was successful
+                if success then
+                    incrementRoomUsage()
+                    if MagicConch.Config.debugMode then
+                        local currentUsage = getCurrentRoomUsage()
+                        local maxAttempts = MagicConch.Config.attemptsPerRoom
+                        MagicConch.printDebug("Magic Conch executed successfully, usage: " .. currentUsage .. "/" .. maxAttempts)
+                    end
+                else
+                    if MagicConch.Config.debugMode then
+                        MagicConch.printDebug("Magic Conch execution failed, usage count unchanged")
+                    end
                 end
             end
         end
+    else
+        -- Reset state when key is released
+        hotkeyState.wasPressed = false
     end
 end
 

@@ -23,7 +23,12 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         CurrentSetting = function() return mod.Config.deleteMode end,
         Display = function() return "Delete Mode: " .. (mod.Config.deleteMode and "ON" or "OFF") end,
         Info = {"Delete items/pickups when receiving negative answers."},
-        OnChange = function(b) mod.Config.deleteMode = b end,
+        OnChange = function(b) 
+            mod.Config.deleteMode = b
+            if mod.Config.debugMode then
+                Isaac.ConsoleOutput("Delete Mode Changed to: " .. tostring(b))
+            end
+        end,
     })
 
     -- Attempts per Room
@@ -157,6 +162,91 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         Info = {"Press a button on your keyboard to change this setting."},
     })
 
+    -- Probabilities Category
+    ModConfigMenu.AddSpace(category, "Probabilities")
+    ModConfigMenu.AddText(category, "Probabilities", "--- Probability Settings ---")
+
+    -- Helper function to calculate Neutral based on Pos/Neg
+    local function updateNeutral(mod)
+        if not mod.Config.chances then
+            mod.Config.chances = { positive = 40, neutral = 20, negative = 40 }
+        end
+        
+        local pos = mod.Config.chances.positive
+        local neg = mod.Config.chances.negative
+        
+        -- Calculate Neutral
+        local neu = 100 - pos - neg
+        -- Safety clamp
+        if neu < 0 then neu = 0 end
+        
+        mod.Config.chances.neutral = neu
+    end
+
+    -- Positive Chance
+    ModConfigMenu.AddSetting(category, "Probabilities", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function() return mod.Config.chances.positive end,
+        Minimum = 0,
+        Maximum = 100,
+        Display = function() 
+            return "Positive Chance: " .. mod.Config.chances.positive .. "%" 
+        end,
+        OnChange = function(n)
+            mod.Config.chances.positive = n
+            
+            -- If Pos + Neg > 100, decrease Neg
+            local neg = mod.Config.chances.negative
+            if n + neg > 100 then
+                mod.Config.chances.negative = 100 - n
+            end
+            
+            updateNeutral(mod)
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"Probability of getting a Positive answer."},
+    })
+
+    -- Negative Chance (Now Adjustable)
+    ModConfigMenu.AddSetting(category, "Probabilities", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function() return mod.Config.chances.negative end,
+        Minimum = 0,
+        Maximum = 100,
+        Display = function() 
+            return "Negative Chance: " .. mod.Config.chances.negative .. "%" 
+        end,
+        OnChange = function(n)
+            mod.Config.chances.negative = n
+            
+            -- If Pos + Neg > 100, decrease Pos
+            local pos = mod.Config.chances.positive
+            if pos + n > 100 then
+                mod.Config.chances.positive = 100 - n
+            end
+            
+            updateNeutral(mod)
+            MagicConch_Config.Save(mod)
+        end,
+        Info = {"Probability of getting a Negative answer."},
+    })
+
+    -- Neutral Chance (Read Only, Calculated)
+    ModConfigMenu.AddSetting(category, "Probabilities", {
+        Type = ModConfigMenu.OptionType.NUMBER,
+        CurrentSetting = function() return mod.Config.chances.neutral end,
+        Minimum = 0,
+        Maximum = 100,
+        Display = function() 
+            return "Neutral Chance: " .. mod.Config.chances.neutral .. "%" 
+        end,
+        OnChange = function(n)
+            -- Read only, revert changes
+            updateNeutral(mod)
+        end,
+        Info = {"Probability of getting a Neutral answer.", "Calculated automatically: 100 - Positive - Negative"},
+    })
+    
     -- Timing Category
     ModConfigMenu.AddSpace(category, "Timing")
     ModConfigMenu.AddText(category, "Timing", "--- Timing Settings ---")
