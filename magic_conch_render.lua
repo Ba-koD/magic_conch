@@ -3,25 +3,33 @@ local MagicConch_Render = {}
 -- Magic Conch icon sprite (initialized like hit counter mod)
 local conchSprite = Sprite()
 local spriteLoaded = false
+local lastDeleteMode = nil
 
 local function renderLine(text, x, y, r, g, b)
     Isaac.RenderText(text, x, y, r, g, b, 1)
 end
 
--- Initialize sprite loading (similar to hit counter mod)
-local function initSprite()
-    if not spriteLoaded then
-        -- Try to load a basic collectible sprite and replace with our texture
+-- Initialize or update sprite based on config
+local function updateSprite(mod)
+    local currentDeleteMode = mod.Config.deleteMode
+    
+    -- Reload if not loaded OR if delete mode changed
+    if not spriteLoaded or lastDeleteMode ~= currentDeleteMode then
         local success = pcall(function()
             conchSprite:Load("gfx/005.100_collectible.anm2", true)
-            conchSprite:ReplaceSpritesheet(1, "gfx/MagicConch.png")
+            if currentDeleteMode then
+                conchSprite:ReplaceSpritesheet(1, "gfx/MagicConchDel.png")
+            else
+                conchSprite:ReplaceSpritesheet(1, "gfx/MagicConch.png")
+            end
             conchSprite:LoadGraphics()
             conchSprite:SetFrame("Idle", 0)
-            conchSprite.Color = Color(1, 1, 1, 0.8) -- Slightly transparent like hit counter
+            conchSprite.Color = Color(1, 1, 1, 0.8)
         end)
         
         if success then
             spriteLoaded = true
+            lastDeleteMode = currentDeleteMode
         end
     end
 end
@@ -30,8 +38,8 @@ end
 function MagicConch_Render:RenderRoomAttempts(mod)
     if not mod or not mod.Config then return end
     
-    -- Initialize sprite if not done yet
-    initSprite()
+    -- Update sprite if needed
+    updateSprite(mod)
     
     -- Get usage data
     local currentUsage = 0

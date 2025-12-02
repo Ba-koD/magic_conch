@@ -69,18 +69,9 @@ local function executeMagicConchSequence(triggerSource)
             -- Load without loading graphics immediately (false)
             sprite:Load("gfx/005.100_collectible.anm2", false)
             
-            -- Determine texture based on Delete Mode
             local texturePath = "gfx/MagicConch.png"
-            if MagicConch.Config.deleteMode then
-                texturePath = "gfx/MagicConchDel.png"
-            end
-            
-            if MagicConch.Config.debugMode then
-                MagicConch.printDebug("Loading Texture: " .. texturePath)
-            end
             
             sprite:ReplaceSpritesheet(1, texturePath)
-            -- Force reload graphics
             sprite:LoadGraphics()
             sprite:SetFrame("Idle", 0)
             sprite:Update()
