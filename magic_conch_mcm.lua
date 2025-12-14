@@ -22,7 +22,10 @@ function MagicConch_MCM.Setup(mod, MagicConch_Lang, MagicConch_Config)
         Type = ModConfigMenu.OptionType.BOOLEAN,
         CurrentSetting = function() return mod.Config.deleteMode end,
         Display = function() return "Delete Mode: " .. (mod.Config.deleteMode and "ON" or "OFF") end,
-        Info = {"Delete items/pickups when receiving negative answers."},
+        Info = {
+            "Delete items when result doesn't match.",
+            "[Conch's Blessing] delete when cannot evolve or negative"
+        },
         OnChange = function(b) 
             mod.Config.deleteMode = b
             if mod.Config.debugMode then

@@ -284,10 +284,27 @@ local stateHandlers = {
                         end
                         
                         -- Delete Mode: Remove pickups and items if enabled
+                        -- Skip default delete behavior if Conch's Blessing is handling it
                         if MagicConch.Config.deleteMode then
-                            local removedCount = removeAllPickupsAndItems()
-                            if MagicConch.Config.debugMode then
-                                MagicConch.printDebug("Delete Mode: Removed " .. removedCount .. " entities")
+                            local conchBlessingHandling = false
+                            -- Check if Conch's Blessing is registered (it handles Delete Mode internally)
+                            for _, callbackData in ipairs(gameState.callbacks) do
+                                if callbackData.modName == "Conch's Blessing" then
+                                    conchBlessingHandling = true
+                                    break
+                                end
+                            end
+                            
+                            if conchBlessingHandling then
+                                if MagicConch.Config.debugMode then
+                                    MagicConch.printDebug("Delete Mode: Delegated to Conch's Blessing")
+                                end
+                            else
+                                -- Default behavior: remove all pickups
+                                local removedCount = removeAllPickupsAndItems()
+                                if MagicConch.Config.debugMode then
+                                    MagicConch.printDebug("Delete Mode: Removed " .. removedCount .. " entities")
+                                end
                             end
                         end
                         
